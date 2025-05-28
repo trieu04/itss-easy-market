@@ -1,10 +1,43 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import "./configs/crud-config";
+import "./configs/vars";
+
+import { Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { NestFactory } from "@nestjs/core";
+import { NestExpressApplication } from "@nestjs/platform-express";
+import { useContainer } from "class-validator";
+import { AppModule } from "./app/app.module";
+import { configSwagger } from "./configs/swagger";
+
+declare const module: any;
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const logger = new Logger("Bootstrap");
+
+  // Validation
+  useContainer(app.select(AppModule), { fallbackOnErrors: true });
+
+  // Enable CORS
   app.enableCors();
-  app.setGlobalPrefix('api');
-  await app.listen(process.env.PORT ?? 3000);
+
+  // Config Swagger
+  configSwagger(app);
+
+  // Get the port from the config
+  const configService = app.get<ConfigService>(ConfigService);
+  const port = configService.get("app.port") || 3000;
+
+  // Start the app
+  await app.listen(port, () => {
+    logger.log(`Server is running on port ${port}`);
+  });
+
+  // Hot Module Replacement
+  if (module.hot) {
+    module.hot.accept();
+    module.hot.dispose(() => app.close());
+  }
 }
+
 bootstrap();

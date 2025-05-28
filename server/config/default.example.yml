@@ -1,0 +1,35 @@
+app:
+  name: ITSS
+
+db:
+  host: hostname.example.com
+  port: 5432
+  username: postgres
+  password: password123
+  database: itss
+  synchronize: true
+  logging:
+    - info
+    - error
+
+jwt:
+  secret: 'jwt-secret-key'
+  expiresIn: 2880 # in minutes
+
+google-oauth:
+  #clientID: 'client-id.apps.googleusercontent.com'
+  #clientSecret: 'client-secret'
+
+s3:
+  #region: us-east-1
+  #bucketName: bucket-name
+  #accessKeyId: access-key-id
+  #secretAccessKey: secret-access-key
+
+mailer:
+  #host: smtp.office365.com
+  #port: 587
+  #secure: false
+  #user: mepro@fayedark.com
+  #pass: secret
+  #from: mepro@fayedark.com
