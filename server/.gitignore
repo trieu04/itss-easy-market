@@ -29,11 +29,7 @@ lerna-debug.log*
 *.sublime-workspace
 
 # IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+.vscode/settings.json
 
 # dotenv environment variable files
 .env
@@ -41,6 +37,10 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.local
+
+# config files
+/config/*
+!/config/default.example.yml
 
 # temp directory
 .temp
@@ -54,3 +54,5 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+*Zone.Identifier
