@@ -1,33 +1,34 @@
-# Install dependencies
+# Install all dependencies (including devDependencies for building)
 FROM node:20-alpine AS deps
 WORKDIR /app
-COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+COPY package.json package-lock.json ./
+RUN npm ci
 
-# Install production dependencies
+# Install production dependencies only
 FROM node:20-alpine AS deps-production
 WORKDIR /app
-COPY package.json yarn.lock ./
-RUN yarn install --production
+COPY package.json package-lock.json ./
+RUN npm install --omit=dev --no-audit --no-fund
 
-# Rebuild the source code only when needed
+# Build the application
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY src/ src/
 COPY tsconfig*.json ./
-COPY package.json yarn.lock ./
+COPY package.json package-lock.json ./
 COPY --from=deps /app/node_modules ./node_modules
-RUN yarn build
+RUN npm run build
 
 # Production image
 FROM node:20-alpine AS runner
 ENV NODE_ENV=production
-RUN mkdir -p /app
 WORKDIR /app
-COPY package.json yarn.lock ./
+
+# Copy package.json (needed for 'npm run' in CMD)
+COPY package.json ./
 COPY --from=deps-production /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 3000
 
-CMD ["yarn", "start:prod"]
+CMD ["npm", "run", "start:prod"]
