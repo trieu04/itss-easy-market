@@ -5,6 +5,8 @@ import { AppProvider } from './contexts/AppContext';
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 import { UIProvider } from './contexts/UIContext';
 import { useInitialData } from './hooks/useInitialData';
+import OAuthCallback from './pages/OAuthCallback';
+
 
 // Components
 import Layout from './components/layout/Layout';
@@ -66,6 +68,7 @@ const AppContent: React.FC = () => {
             <Register />
           } 
         />
+        <Route path="/oauth-callback" element={<OAuthCallback />} />
         
         {/* Protected routes */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
