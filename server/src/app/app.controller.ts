@@ -1,12 +1,18 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, Inject } from "@nestjs/common";
 import { AppService } from "./app.service";
 import { ProductsService } from "../modules/products/products.service";
+import { ShoppingListService } from "../modules/shopping-list/shopping-list.service";
+import { FridgeService } from "../modules/fridge/fridge.service";
+import { RecipeService } from "../modules/recipe/recipe.service";
 
 @Controller()
 export class AppController {
   constructor(
     private readonly appService: AppService,
     @Inject(ProductsService) private readonly productsService: ProductsService,
+    @Inject(ShoppingListService) private readonly shoppingListService: ShoppingListService,
+    @Inject(FridgeService) private readonly fridgeService: FridgeService,
+    @Inject(RecipeService) private readonly recipeService: RecipeService,
   ) {}
 
   @Get()
@@ -166,41 +172,206 @@ export class AppController {
 
   // Statistics endpoints
   @Get("statistics")
-  getStatistics(@Query("start") _start?: string, @Query("end") _end?: string, @Query("period") _period?: string) {
-    return {
-      overview: {
-        totalSpent: 0,
-        totalProducts: 0,
-        totalRecipes: 0,
-        completedShoppingLists: 0,
-        averageShoppingListValue: 0,
-        topCategories: [],
-      },
-      productStats: {
-        mostPurchased: [],
-        categoryDistribution: [],
-        priceRanges: [],
-        stockLevels: [],
-      },
-      recipeStats: {
-        mostViewed: [],
-        difficultyDistribution: [],
+  async getStatistics(@Query("start") _start?: string, @Query("end") _end?: string, @Query("period") _period?: string) {
+    try {
+      let products: any[] = [];
+      let shoppingLists: any[] = [];
+      let _fridgeItems: any[] = [];
+      let recipes: any[] = [];
+
+      try {
+        [products, shoppingLists, _fridgeItems, recipes] = await Promise.all([
+          this.productsService.findAll(),
+          this.shoppingListService.getUserShoppingLists("00000000-0000-0000-0000-000000000000"), // Sử dụng UUID hợp lệ
+          this.fridgeService.findAll("00000000-0000-0000-0000-000000000000"), // Sử dụng UUID hợp lệ
+          this.recipeService.findAll(),
+        ]);
+      } catch (error) {
+        console.error("Error fetching data for statistics:", error);
+      }
+
+      // Đảm bảo mỗi mảng đều có giá trị hợp lệ
+      products = Array.isArray(products) ? products : [];
+      shoppingLists = Array.isArray(shoppingLists) ? shoppingLists : [];
+      _fridgeItems = Array.isArray(_fridgeItems) ? _fridgeItems : [];
+      recipes = Array.isArray(recipes) ? recipes : [];
+
+      // Calculate overview stats
+      const totalProducts = products.length;
+      const totalRecipes = recipes.length;
+      const totalShoppingLists = shoppingLists.length;
+      const completedShoppingLists = shoppingLists.filter(list => (list as any)?.status === "completed").length;
+      const totalSpent = products.reduce((sum, product) => sum + (product.price * (product.stock || 1)), 0);
+      const averageShoppingListValue = totalShoppingLists > 0 ? totalSpent / totalShoppingLists : 0;
+
+      // Calculate category distribution
+      const categoryStats: Record<string, { count: number; value: number }> = {};
+      products.forEach((product) => {
+        if (!categoryStats[product.category]) {
+          categoryStats[product.category] = { count: 0, value: 0 };
+        }
+        categoryStats[product.category].count += 1;
+        categoryStats[product.category].value += product.price * (product.stock || 1);
+      });
+
+      const topCategories = Object.entries(categoryStats)
+        .map(([category, stats]) => ({
+          category,
+          count: stats.count,
+          value: stats.value,
+          percentage: totalSpent > 0 ? (stats.value / totalSpent) * 100 : 0,
+        }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
+
+      // Product statistics
+      const mostPurchased = products
+        .sort((a, b) => (b.stock || 0) - (a.stock || 0))
+        .slice(0, 10)
+        .map(product => ({
+          id: product.id?.toString() || "",
+          name: product.name || "Không tên",
+          category: product.category || "Khác",
+          totalQuantity: product.stock || 0,
+          totalValue: product.price * (product.stock || 1),
+          averagePrice: product.price || 0,
+        }));
+
+      const priceRanges = [
+        { range: "0-50k", count: products.filter(p => (p.price || 0) < 50000).length },
+        { range: "50k-100k", count: products.filter(p => (p.price || 0) >= 50000 && (p.price || 0) < 100000).length },
+        { range: "100k-200k", count: products.filter(p => (p.price || 0) >= 100000 && (p.price || 0) < 200000).length },
+        { range: "200k+", count: products.filter(p => (p.price || 0) >= 200000).length },
+      ];
+
+      const stockLevels = [
+        { level: "Hết hàng", count: products.filter(p => (p.stock || 0) === 0).length },
+        { level: "Ít hàng", count: products.filter(p => (p.stock || 0) > 0 && (p.stock || 0) < 10).length },
+        { level: "Trung bình", count: products.filter(p => (p.stock || 0) >= 10 && (p.stock || 0) < 50).length },
+        { level: "Nhiều hàng", count: products.filter(p => (p.stock || 0) >= 50).length },
+      ];
+
+      // Recipe statistics from real data
+      let recipeStats = { 
+        total: 0,
+        difficultyDistribution: [
+          { difficulty: "easy", count: 0, percentage: 0 },
+          { difficulty: "medium", count: 0, percentage: 0 },
+          { difficulty: "hard", count: 0, percentage: 0 },
+        ],
         averageCookTime: 0,
-        averageServings: 0,
-        popularTags: [],
-      },
-      shoppingStats: {
-        completionRate: 0,
-        averageItemsPerList: 0,
-        monthlyTrends: [],
-        frequentlyBoughtTogether: [],
-      },
-      timeRange: {
-        start: "",
-        end: "",
-        period: "month",
-      },
-    };
+        averageServings: 0
+      };
+      
+      let mostViewedRecipes: any[] = [];
+      
+      try {
+        recipeStats = await this.recipeService.getRecipeStats();
+        mostViewedRecipes = await this.recipeService.getMostViewed(5);
+        
+        // Tính phần trăm cho difficultyDistribution nếu chưa có
+        if (recipeStats.total > 0) {
+          recipeStats.difficultyDistribution = recipeStats.difficultyDistribution.map(item => ({
+            ...item,
+            percentage: item.percentage !== undefined ? item.percentage : (item.count / recipeStats.total) * 100
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching recipe statistics:", error);
+      }
+
+      // Shopping statistics
+      const completionRate = totalShoppingLists > 0 ? (completedShoppingLists / totalShoppingLists) * 100 : 0;
+      const averageItemsPerList = shoppingLists.length > 0
+        ? shoppingLists.reduce((sum, list) => sum + ((list.items?.length) || 0), 0) / shoppingLists.length
+        : 0;
+
+      // Tính phần trăm cho priceRanges và stockLevels
+      const totalPriceRangeCount = priceRanges.reduce((sum, range) => sum + range.count, 0);
+      const priceRangesWithPercentage = priceRanges.map(range => ({
+        ...range,
+        percentage: totalPriceRangeCount > 0 ? (range.count / totalPriceRangeCount) * 100 : 0
+      }));
+
+      const totalStockLevelCount = stockLevels.reduce((sum, level) => sum + level.count, 0);
+      const stockLevelsWithPercentage = stockLevels.map(level => ({
+        level: level.level === "Hết hàng" ? "out" : 
+               level.level === "Ít hàng" ? "low" : 
+               level.level === "Trung bình" ? "medium" : "high",
+        count: level.count,
+        percentage: totalStockLevelCount > 0 ? (level.count / totalStockLevelCount) * 100 : 0
+      }));
+
+      return {
+        overview: {
+          totalSpent,
+          totalProducts,
+          totalRecipes,
+          completedShoppingLists,
+          averageShoppingListValue,
+          topCategories,
+        },
+        productStats: {
+          mostPurchased,
+          categoryDistribution: topCategories,
+          priceRanges: priceRangesWithPercentage,
+          stockLevels: stockLevelsWithPercentage,
+        },
+        recipeStats: {
+          mostViewed: mostViewedRecipes,
+          difficultyDistribution: recipeStats.difficultyDistribution,
+          averageCookTime: recipeStats.averageCookTime,
+          averageServings: recipeStats.averageServings,
+          popularTags: [],
+        },
+        shoppingStats: {
+          completionRate,
+          averageItemsPerList,
+          monthlyTrends: [],
+          frequentlyBoughtTogether: [],
+        },
+        timeRange: {
+          start: "",
+          end: "",
+          period: "month",
+        },
+      };
+    } catch (error) {
+      console.error("Error fetching statistics:", error);
+      return {
+        overview: {
+          totalSpent: 0,
+          totalProducts: 0,
+          totalRecipes: 0,
+          completedShoppingLists: 0,
+          averageShoppingListValue: 0,
+          topCategories: [],
+        },
+        productStats: {
+          mostPurchased: [],
+          categoryDistribution: [],
+          priceRanges: [],
+          stockLevels: [],
+        },
+        recipeStats: {
+          mostViewed: [],
+          difficultyDistribution: [],
+          averageCookTime: 0,
+          averageServings: 0,
+          popularTags: [],
+        },
+        shoppingStats: {
+          completionRate: 0,
+          averageItemsPerList: 0,
+          monthlyTrends: [],
+          frequentlyBoughtTogether: [],
+        },
+        timeRange: {
+          start: "",
+          end: "",
+          period: "month",
+        },
+      };
   }
 
   @Get("statistics/overview")
