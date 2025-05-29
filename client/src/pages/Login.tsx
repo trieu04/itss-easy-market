@@ -4,7 +4,7 @@ import { useAuthContext } from '../contexts/AuthContext';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 const Login: React.FC = () => {
-  const { login, state, loginWithGoogle} = useAuthContext();
+  const { login, state } = useAuthContext();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
@@ -36,9 +36,6 @@ const Login: React.FC = () => {
       [e.target.name]: e.target.value
     });
   };
-
-
-
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -132,23 +129,6 @@ const Login: React.FC = () => {
               </a>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={loginWithGoogle}
-            className="w-full flex items-center justify-center gap-2 py-2 px-4 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 shadow-sm transition font-medium text-gray-700 mt-4"
-          >
-            <svg className="w-5 h-5" viewBox="0 0 48 48">
-              <g>
-                <path fill="#4285F4" d="M24 9.5c3.54 0 6.7 1.22 9.19 3.23l6.85-6.85C36.68 2.34 30.7 0 24 0 14.82 0 6.71 5.06 2.69 12.44l7.98 6.2C13.06 13.07 18.13 9.5 24 9.5z"/>
-                <path fill="#34A853" d="M46.1 24.55c0-1.64-.15-3.22-.43-4.74H24v9.01h12.42c-.54 2.91-2.18 5.38-4.65 7.05l7.19 5.6C43.95 37.13 46.1 31.37 46.1 24.55z"/>
-                <path fill="#FBBC05" d="M10.67 28.64a14.5 14.5 0 0 1 0-9.28l-7.98-6.2A23.94 23.94 0 0 0 0 24c0 3.77.9 7.34 2.69 10.48l7.98-6.2z"/>
-                <path fill="#EA4335" d="M24 48c6.48 0 11.92-2.15 15.89-5.85l-7.19-5.6c-2.01 1.35-4.59 2.15-8.7 2.15-5.87 0-10.94-3.57-13.33-8.74l-7.98 6.2C6.71 42.94 14.82 48 24 48z"/>
-                <path fill="none" d="M0 0h48v48H0z"/>
-              </g>
-            </svg>
-            Đăng nhập với Google
-          </button>
 
           <div>
             <button

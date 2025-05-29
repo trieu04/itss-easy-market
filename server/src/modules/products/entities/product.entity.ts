@@ -17,6 +17,9 @@ export class Product {
   @Column("int")
   stock: number;
 
+  @Column({ length: 100, nullable: true })
+  category: string;
+
   @Column({ default: true })
   isActive: boolean;
 

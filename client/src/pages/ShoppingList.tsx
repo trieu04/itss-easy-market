@@ -1,15 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAppContext } from '../contexts/AppContext';
+import { shoppingListService } from '../services/shoppingListService';
+import type { ShoppingList as APIShoppingList } from '../services/shoppingListService';
+import type { ShoppingList as AppShoppingList } from '../contexts/AppContext';
 import { 
   PlusIcon, 
   TrashIcon, 
   PencilIcon,
   CheckCircleIcon,
   ClockIcon,
-  ShoppingBagIcon
+  ShoppingBagIcon,
+  MagnifyingGlassIcon,
+  EllipsisVerticalIcon
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolidIcon } from '@heroicons/react/24/solid';
-import { useAppContext, ShoppingList as ShoppingListType, ShoppingItem } from '../contexts/AppContext';
 import { AddShoppingListModal } from '../components/modals/AddShoppingListModal';
+import { ShoppingList as ShoppingListType, ShoppingItem } from '../contexts/AppContext';
+
+// Function để convert API format sang App format
+const convertAPIToAppFormat = (apiList: APIShoppingList): AppShoppingList => {
+  const items = shoppingListService.parseItems(apiList.items);
+  return {
+    id: apiList.id,
+    name: apiList.name,
+    date: apiList.createdAt,
+    completed: items.every(item => item.completed),
+    items: items.map(item => ({
+      id: item.id,
+      name: item.name,
+      quantity: item.quantity || 1,
+      unit: 'cái', // default unit
+      category: item.category || 'Khác',
+      completed: item.completed,
+      priority: 'medium' as const
+    }))
+  };
+};
 
 const ShoppingList: React.FC = () => {
   const { state, dispatch } = useAppContext();
@@ -18,13 +44,26 @@ const ShoppingList: React.FC = () => {
   const [activeTab, setActiveTab] = useState('active');
   const [showModal, setShowModal] = useState(false);
   const [editingList, setEditingList] = useState<ShoppingListType | undefined>();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Lọc danh sách theo tab
-  const filteredLists = shoppingLists.filter(list => {
-    if (activeTab === 'active') return !list.completed;
-    if (activeTab === 'completed') return list.completed;
-    return true;
-  });
+  useEffect(() => {
+    loadShoppingLists();
+  }, []);
+
+  const loadShoppingLists = async () => {
+    try {
+      setLoading(true);
+      const apiLists = await shoppingListService.getShoppingLists();
+      const appLists = apiLists.map(convertAPIToAppFormat);
+      dispatch({ type: 'SET_SHOPPING_LISTS', payload: appLists });
+    } catch (err: any) {
+      setError(err.message || 'Không thể tải danh sách mua sắm');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleToggleItem = (listId: string, item: ShoppingItem) => {
     const updatedItem = { ...item, completed: !item.completed };
@@ -102,17 +141,59 @@ const ShoppingList: React.FC = () => {
     }
   };
 
+  const filteredLists = shoppingLists.filter(list => {
+    const matchesSearch = list.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesTab = activeTab === 'completed' ? list.completed : !list.completed;
+    return matchesSearch && matchesTab;
+  });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+        {error}
+        <button 
+          onClick={loadShoppingLists}
+          className="ml-4 text-red-800 underline"
+        >
+          Thử lại
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Danh sách mua sắm</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Danh Sách Mua Sắm</h1>
         <button
-          onClick={handleAddNewList}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+          onClick={() => setShowModal(true)}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700"
         >
-          <PlusIcon className="h-5 w-5 mr-2" />
+          <PlusIcon className="h-4 w-4 mr-2" />
           Tạo danh sách mới
         </button>
+      </div>
+
+      {/* Search Bar */}
+      <div className="mb-6">
+        <div className="relative">
+          <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Tìm kiếm danh sách..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
+        </div>
       </div>
 
       {/* Tabs */}

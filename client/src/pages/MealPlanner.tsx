@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   ChevronLeftIcon, 
   ChevronRightIcon,
@@ -6,16 +6,48 @@ import {
   TrashIcon,
   PencilIcon
 } from '@heroicons/react/24/outline';
-import { useAppContext, MealPlan, Recipe } from '../contexts/AppContext';
+import mealPlannerService, { MealPlan } from '../services/mealPlannerService';
+import recipeService, { Recipe } from '../services/recipeService';
 
 const MealPlanner: React.FC = () => {
-  const { state, dispatch } = useAppContext();
-  const { mealPlans, recipes } = state;
+  const [mealPlans, setMealPlans] = useState<MealPlan[]>([]);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showRecipeModal, setShowRecipeModal] = useState(false);
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner'>('breakfast');
+
+  useEffect(() => {
+    loadData();
+  }, [currentDate]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+      
+      const [plansData, recipesData] = await Promise.all([
+        mealPlannerService.getMealPlans(
+          startOfMonth.toISOString().split('T')[0],
+          endOfMonth.toISOString().split('T')[0]
+        ),
+        recipeService.getRecipes()
+      ]);
+
+      setMealPlans(plansData);
+      setRecipes(recipesData);
+    } catch (err: any) {
+      setError(err.message || 'Không thể tải dữ liệu');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Lấy ngày đầu và cuối tháng
   const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
@@ -62,45 +94,56 @@ const MealPlanner: React.FC = () => {
     setShowRecipeModal(true);
   };
 
-  const handleSelectRecipe = (recipe: Recipe) => {
+  const handleSelectRecipe = async (recipe: Recipe) => {
     if (!selectedDate) return;
 
-    const existingPlan = getMealPlanForDate(selectedDate);
-    
-    if (existingPlan) {
-      // Cập nhật meal plan hiện có
-      const updatedPlan = {
-        ...existingPlan,
-        [selectedMealType]: recipe
-      };
-      dispatch({ type: 'UPDATE_MEAL_PLAN', payload: updatedPlan });
-    } else {
-      // Tạo meal plan mới
-      const newPlan: MealPlan = {
-        id: Date.now().toString(),
-        date: selectedDate,
-        [selectedMealType]: recipe
-      };
-      dispatch({ type: 'ADD_MEAL_PLAN', payload: newPlan });
+    try {
+      const existingPlan = getMealPlanForDate(selectedDate);
+      
+      if (existingPlan) {
+        // Cập nhật meal plan hiện có
+        const updatedPlan = await mealPlannerService.updateMealPlan(existingPlan.id, {
+          [selectedMealType]: recipe.id
+        });
+        setMealPlans(plans => plans.map(p => p.id === updatedPlan.id ? updatedPlan : p));
+      } else {
+        // Tạo meal plan mới
+        const newPlan = await mealPlannerService.createMealPlan({
+          date: selectedDate,
+          [selectedMealType]: recipe.id
+        });
+        setMealPlans(plans => [...plans, newPlan]);
+      }
+      
+      setShowRecipeModal(false);
+    } catch (err: any) {
+      setError(err.message || 'Không thể lưu kế hoạch bữa ăn');
     }
-    
-    setShowRecipeModal(false);
   };
 
-  const handleRemoveMeal = (date: string, mealType: 'breakfast' | 'lunch' | 'dinner') => {
+  const handleRemoveMeal = async (date: string, mealType: 'breakfast' | 'lunch' | 'dinner') => {
     const plan = getMealPlanForDate(date);
     if (!plan) return;
 
-    const updatedPlan = {
-      ...plan,
-      [mealType]: undefined
-    };
+    try {
+      const updatedData = {
+        [mealType]: undefined
+      };
 
-    // Kiểm tra nếu tất cả bữa ăn đều bị xóa thì xóa cả plan
-    if (!updatedPlan.breakfast && !updatedPlan.lunch && !updatedPlan.dinner) {
-      dispatch({ type: 'DELETE_MEAL_PLAN', payload: plan.id });
-    } else {
-      dispatch({ type: 'UPDATE_MEAL_PLAN', payload: updatedPlan });
+      // Kiểm tra nếu tất cả bữa ăn đều bị xóa thì xóa cả plan
+      const hasOtherMeals = (mealType !== 'breakfast' && plan.breakfast) ||
+                           (mealType !== 'lunch' && plan.lunch) ||
+                           (mealType !== 'dinner' && plan.dinner);
+
+      if (!hasOtherMeals) {
+        await mealPlannerService.deleteMealPlan(plan.id);
+        setMealPlans(plans => plans.filter(p => p.id !== plan.id));
+      } else {
+        const updatedPlan = await mealPlannerService.updateMealPlan(plan.id, updatedData);
+        setMealPlans(plans => plans.map(p => p.id === updatedPlan.id ? updatedPlan : p));
+      }
+    } catch (err: any) {
+      setError(err.message || 'Không thể xóa bữa ăn');
     }
   };
 
@@ -113,6 +156,32 @@ const MealPlanner: React.FC = () => {
 
   const today = new Date();
   const todayString = formatDate(today);
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-500"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-6">
+          {error}
+          <button 
+            onClick={loadData}
+            className="ml-4 text-red-800 underline"
+          >
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">

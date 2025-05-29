@@ -8,4 +8,7 @@ export class ShoppingListEntity extends UserBaseEntity {
 
   @Column("text", { array: true })
   items: string[];
+
+  @Column({ default: "active" })
+  status: "active" | "completed" | "cancelled";
 }

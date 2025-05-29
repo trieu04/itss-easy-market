@@ -21,6 +21,9 @@ async function bootstrap() {
   // Enable CORS
   app.enableCors();
 
+  // Set global prefix for all routes
+  app.setGlobalPrefix('api');
+
   // Config Swagger
   configSwagger(app);
 

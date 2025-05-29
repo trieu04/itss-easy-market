@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   MagnifyingGlassIcon, 
   PlusIcon,
@@ -11,12 +11,14 @@ import {
   EyeIcon
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
-import { useAppContext, Recipe } from '../contexts/AppContext';
+import recipeService, { Recipe } from '../services/recipeService';
 import { AddRecipeModal } from '../components/modals/AddRecipeModal';
 
 const Recipes: React.FC = () => {
-  const { state, dispatch } = useAppContext();
-  const { recipes, favorites } = state;
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState('');
@@ -25,6 +27,36 @@ const Recipes: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | undefined>();
   const [viewingRecipe, setViewingRecipe] = useState<Recipe | undefined>();
+
+  useEffect(() => {
+    loadRecipes();
+    loadFavorites();
+  }, []);
+
+  const loadRecipes = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await recipeService.getRecipes();
+      setRecipes(data);
+    } catch (err: any) {
+      setError(err.message || 'Không thể tải danh sách công thức');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadFavorites = () => {
+    const savedFavorites = localStorage.getItem('recipe-favorites');
+    if (savedFavorites) {
+      setFavorites(JSON.parse(savedFavorites));
+    }
+  };
+
+  const saveFavorites = (newFavorites: string[]) => {
+    setFavorites(newFavorites);
+    localStorage.setItem('recipe-favorites', JSON.stringify(newFavorites));
+  };
 
   // Lấy danh sách tags unique
   const allTags = useMemo(() => {
@@ -64,7 +96,8 @@ const Recipes: React.FC = () => {
   }, [recipes, searchTerm, selectedDifficulty, selectedTag, sortBy]);
 
   const handleToggleFavorite = (recipeId: string) => {
-    dispatch({ type: 'TOGGLE_FAVORITE', payload: recipeId });
+    const newFavorites = favorites.includes(recipeId) ? favorites.filter(id => id !== recipeId) : [...favorites, recipeId];
+    saveFavorites(newFavorites);
   };
 
   const handleEditRecipe = (recipe: Recipe) => {
@@ -72,9 +105,16 @@ const Recipes: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleDeleteRecipe = (recipeId: string) => {
+  const handleDeleteRecipe = async (recipeId: string) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa công thức này?')) {
-      dispatch({ type: 'DELETE_RECIPE', payload: recipeId });
+      try {
+        await recipeService.deleteRecipe(recipeId);
+        setRecipes(recipes.filter(r => r.id !== recipeId));
+        const newFavorites = favorites.filter(id => id !== recipeId);
+        saveFavorites(newFavorites);
+      } catch (err: any) {
+        setError(err.message || 'Không thể xóa công thức');
+      }
     }
   };
 
@@ -108,6 +148,40 @@ const Recipes: React.FC = () => {
       default: return 'Trung bình';
     }
   };
+
+  const handleProductSaved = (savedRecipe: Recipe) => {
+    if (editingRecipe) {
+      // Update existing recipe
+      setRecipes(recipes.map(r => r.id === savedRecipe.id ? savedRecipe : r));
+    } else {
+      // Add new recipe
+      setRecipes([...recipes, savedRecipe]);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+          {error}
+          <button 
+            onClick={loadRecipes}
+            className="ml-4 text-red-800 underline"
+          >
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -424,6 +498,7 @@ const Recipes: React.FC = () => {
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         recipe={editingRecipe}
+        onRecipeSaved={handleProductSaved}
       />
     </div>
   );

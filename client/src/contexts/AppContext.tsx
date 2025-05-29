@@ -81,6 +81,7 @@ type AppAction =
   | { type: 'ADD_PRODUCT'; payload: Product }
   | { type: 'UPDATE_PRODUCT'; payload: Product }
   | { type: 'DELETE_PRODUCT'; payload: string }
+  | { type: 'SET_SHOPPING_LISTS'; payload: ShoppingList[] }
   | { type: 'ADD_SHOPPING_LIST'; payload: ShoppingList }
   | { type: 'UPDATE_SHOPPING_LIST'; payload: ShoppingList }
   | { type: 'DELETE_SHOPPING_LIST'; payload: string }
@@ -139,6 +140,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         products: state.products.filter(p => p.id !== action.payload),
       };
+    
+    case 'SET_SHOPPING_LISTS':
+      return { ...state, shoppingLists: action.payload };
     
     case 'ADD_SHOPPING_LIST':
       return { ...state, shoppingLists: [...state.shoppingLists, action.payload] };

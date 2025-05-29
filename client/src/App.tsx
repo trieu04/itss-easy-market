@@ -1,12 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
-import { AppProvider } from './contexts/AppContext';
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 import { UIProvider } from './contexts/UIContext';
-import { useInitialData } from './hooks/useInitialData';
-import OAuthCallback from './pages/OAuthCallback';
-
 
 // Components
 import Layout from './components/layout/Layout';
@@ -14,7 +10,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
 import Dashboard from './pages/Dashboard';
-import ShoppingList from './pages/ShoppingList';
+import ShoppingListNew from './pages/ShoppingListNew';
 import FoodStore from './pages/FoodStore';
 import Recipes from './pages/Recipes';
 import MealPlanner from './pages/MealPlanner';
@@ -26,24 +22,12 @@ import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 
 const AppContent: React.FC = () => {
-  const { loading, error } = useInitialData();
   const { state: authState } = useAuthContext();
 
-  if (loading) {
+  if (authState.loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-500"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Lỗi tải dữ liệu</h1>
-          <p className="text-gray-600">{error}</p>
-        </div>
       </div>
     );
   }
@@ -68,7 +52,6 @@ const AppContent: React.FC = () => {
             <Register />
           } 
         />
-        <Route path="/oauth-callback" element={<OAuthCallback />} />
         
         {/* Protected routes */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -96,7 +79,7 @@ const AppContent: React.FC = () => {
         <Route path="/shopping-list" element={
           <ProtectedRoute>
             <Layout>
-              <ShoppingList />
+              <ShoppingListNew />
             </Layout>
           </ProtectedRoute>
         } />
@@ -144,9 +127,7 @@ function App() {
   return (
     <AuthProvider>
       <UIProvider>
-        <AppProvider>
-          <AppContent />
-        </AppProvider>
+        <AppContent />
       </UIProvider>
     </AuthProvider>
   );
