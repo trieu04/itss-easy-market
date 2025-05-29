@@ -6,7 +6,7 @@ import { Repository } from "typeorm";
 
 @Injectable()
 export class GroupService extends TypeOrmCrudService<GroupEntity> {
-    constructor(@InjectRepository(GroupEntity) public groupRepo: Repository<GroupEntity>) {
-        super(groupRepo);
-    }
+  constructor(@InjectRepository(GroupEntity) public groupRepo: Repository<GroupEntity>) {
+    super(groupRepo);
+  }
 }

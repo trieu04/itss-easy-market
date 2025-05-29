@@ -10,8 +10,8 @@ import { RolesGuard } from "../auth/guards/roles.guard";
 @UseGuards(AuthGuard, RolesGuard)
 @Roles([UserRoleEnum.USER])
 export class SuggestionController {
-    @Get("generate-suggestions")
-    generateSuggestions() {
-        return [];
-    }
+  @Get("generate-suggestions")
+  generateSuggestions() {
+    return [];
+  }
 }
