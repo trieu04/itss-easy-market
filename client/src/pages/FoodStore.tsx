@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   MagnifyingGlassIcon, 
   PlusIcon,
@@ -9,18 +9,62 @@ import {
   TrashIcon
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
-import { useAppContext, Product } from '../contexts/AppContext';
+import productService, { Product } from '../services/productService';
 import { AddProductModal } from '../components/modals/AddProductModal';
 
 const FoodStore: React.FC = () => {
-  const { state, dispatch } = useAppContext();
-  const { products, favorites, cart } = state;
+  const [products, setProducts] = useState<Product[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [cart, setCart] = useState<{ productId: string; quantity: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | undefined>();
+
+  useEffect(() => {
+    loadProducts();
+    loadLocalData();
+  }, []);
+
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await productService.getProducts();
+      setProducts(data);
+    } catch (err: any) {
+      setError(err.message || 'Không thể tải danh sách sản phẩm');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadLocalData = () => {
+    // Load favorites và cart từ localStorage
+    const savedFavorites = localStorage.getItem('favorites');
+    const savedCart = localStorage.getItem('cart');
+    
+    if (savedFavorites) {
+      setFavorites(JSON.parse(savedFavorites));
+    }
+    if (savedCart) {
+      setCart(JSON.parse(savedCart));
+    }
+  };
+
+  const saveFavorites = (newFavorites: string[]) => {
+    setFavorites(newFavorites);
+    localStorage.setItem('favorites', JSON.stringify(newFavorites));
+  };
+
+  const saveCart = (newCart: { productId: string; quantity: number }[]) => {
+    setCart(newCart);
+    localStorage.setItem('cart', JSON.stringify(newCart));
+  };
 
   // Lấy danh sách danh mục unique
   const categories = useMemo(() => {
@@ -59,14 +103,29 @@ const FoodStore: React.FC = () => {
   }, [products, searchTerm, selectedCategory, sortBy]);
 
   const handleAddToCart = (product: Product, quantity: number = 1) => {
-    dispatch({ 
-      type: 'ADD_TO_CART', 
-      payload: { productId: product.id, quantity } 
-    });
+    const existingCartItem = cart.find(item => item.productId === product.id);
+    let newCart;
+    
+    if (existingCartItem) {
+      newCart = cart.map(item =>
+        item.productId === product.id
+          ? { ...item, quantity: item.quantity + quantity }
+          : item
+      );
+    } else {
+      newCart = [...cart, { productId: product.id, quantity }];
+    }
+    
+    saveCart(newCart);
   };
 
   const handleToggleFavorite = (productId: string) => {
-    dispatch({ type: 'TOGGLE_FAVORITE', payload: productId });
+    const isFavorite = favorites.includes(productId);
+    const newFavorites = isFavorite
+      ? favorites.filter(id => id !== productId)
+      : [...favorites, productId];
+    
+    saveFavorites(newFavorites);
   };
 
   const handleEditProduct = (product: Product) => {
@@ -74,15 +133,30 @@ const FoodStore: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleDeleteProduct = (productId: string) => {
+  const handleDeleteProduct = async (productId: string) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) {
-      dispatch({ type: 'DELETE_PRODUCT', payload: productId });
+      try {
+        await productService.deleteProduct(productId);
+        setProducts(products.filter(p => p.id !== productId));
+      } catch (err: any) {
+        setError(err.message || 'Không thể xóa sản phẩm');
+      }
     }
   };
 
   const handleAddNewProduct = () => {
     setEditingProduct(undefined);
     setShowModal(true);
+  };
+
+  const handleProductSaved = (savedProduct: Product) => {
+    if (editingProduct) {
+      // Update existing product
+      setProducts(products.map(p => p.id === savedProduct.id ? savedProduct : p));
+    } else {
+      // Add new product
+      setProducts([...products, savedProduct]);
+    }
   };
 
   const formatPrice = (price: number) => {
@@ -96,6 +170,30 @@ const FoodStore: React.FC = () => {
     const cartItem = cart.find(item => item.productId === productId);
     return cartItem ? cartItem.quantity : 0;
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+          {error}
+          <button 
+            onClick={loadProducts}
+            className="ml-4 text-red-800 underline"
+          >
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -284,20 +382,28 @@ const FoodStore: React.FC = () => {
                   {cartQuantity > 0 ? (
                     <div className="flex items-center space-x-2 flex-1">
                       <button
-                        onClick={() => dispatch({ 
-                          type: 'UPDATE_CART_QUANTITY', 
-                          payload: { productId: product.id, quantity: cartQuantity - 1 }
-                        })}
+                        onClick={() => {
+                          const newCart = cart.map(item =>
+                            item.productId === product.id
+                              ? { ...item, quantity: Math.max(0, cartQuantity - 1) }
+                              : item
+                          ).filter(item => item.quantity > 0);
+                          saveCart(newCart);
+                        }}
                         className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50"
                       >
                         -
                       </button>
                       <span className="font-medium">{cartQuantity}</span>
                       <button
-                        onClick={() => dispatch({ 
-                          type: 'UPDATE_CART_QUANTITY', 
-                          payload: { productId: product.id, quantity: cartQuantity + 1 }
-                        })}
+                        onClick={() => {
+                          const newCart = cart.map(item =>
+                            item.productId === product.id
+                              ? { ...item, quantity: cartQuantity + 1 }
+                              : item
+                          );
+                          saveCart(newCart);
+                        }}
                         className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50"
                       >
                         +

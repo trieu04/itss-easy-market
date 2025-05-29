@@ -19,6 +19,7 @@ const Profile: React.FC = () => {
     name: '',
     email: '',
     avatar: '',
+    image: '',
     preferences: {
       language: 'vi',
       theme: 'light',
@@ -161,7 +162,7 @@ const Profile: React.FC = () => {
             {/* Avatar */}
             <div className="relative">
               <img
-                src={editedUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(editedUser.name || 'User')}&background=10b981&color=fff`}
+                src={editedUser.avatar || editedUser.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(editedUser.name || 'User')}&background=10b981&color=fff`}
                 alt={editedUser.name}
                 className="w-24 h-24 rounded-full object-cover"
               />

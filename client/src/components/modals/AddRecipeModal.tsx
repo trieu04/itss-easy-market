@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { useAppContext, Recipe } from '../../contexts/AppContext';
+import recipeService, { Recipe, CreateRecipeRequest } from '../../services/recipeService';
 
 interface AddRecipeModalProps {
   isOpen: boolean;
   onClose: () => void;
   recipe?: Recipe;
+  onRecipeSaved?: (recipe: Recipe) => void;
 }
 
 const difficulties = [
@@ -24,9 +25,9 @@ const commonTags = [
 export const AddRecipeModal: React.FC<AddRecipeModalProps> = ({
   isOpen,
   onClose,
-  recipe
+  recipe,
+  onRecipeSaved
 }) => {
-  const { dispatch } = useAppContext();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -44,6 +45,7 @@ export const AddRecipeModal: React.FC<AddRecipeModalProps> = ({
   const [tags, setTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (recipe) {
@@ -73,6 +75,7 @@ export const AddRecipeModal: React.FC<AddRecipeModalProps> = ({
     }
     setCustomTag('');
     setErrors({});
+    setLoading(false);
   }, [recipe, isOpen]);
 
   const validateForm = () => {
@@ -105,36 +108,46 @@ export const AddRecipeModal: React.FC<AddRecipeModalProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
 
-    const validIngredients = ingredients.filter(ing => ing.name.trim());
-    const validInstructions = instructions.filter(inst => inst.trim());
+    try {
+      setLoading(true);
+      
+      const validIngredients = ingredients.filter(ing => ing.name.trim());
+      const validInstructions = instructions.filter(inst => inst.trim());
 
-    const recipeData: Recipe = {
-      id: recipe?.id || Date.now().toString(),
-      name: formData.name.trim(),
-      description: formData.description.trim(),
-      cookTime: parseInt(formData.cookTime),
-      servings: parseInt(formData.servings),
-      image: formData.image || '/images/default-recipe.jpg',
-      difficulty: formData.difficulty,
-      ingredients: validIngredients,
-      instructions: validInstructions,
-      tags: tags
-    };
+      const recipeData: CreateRecipeRequest = {
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        cookTime: parseInt(formData.cookTime),
+        servings: parseInt(formData.servings),
+        image: formData.image || '/images/default-recipe.jpg',
+        difficulty: formData.difficulty,
+        ingredients: validIngredients,
+        instructions: validInstructions,
+        tags: tags
+      };
 
-    if (recipe) {
-      dispatch({ type: 'UPDATE_RECIPE', payload: recipeData });
-    } else {
-      dispatch({ type: 'ADD_RECIPE', payload: recipeData });
+      let savedRecipe: Recipe;
+      if (recipe) {
+        savedRecipe = await recipeService.updateRecipe(recipe.id, recipeData);
+      } else {
+        savedRecipe = await recipeService.createRecipe(recipeData);
+      }
+
+      onRecipeSaved?.(savedRecipe);
+      onClose();
+    } catch (error: any) {
+      console.error('Failed to save recipe:', error);
+      setErrors({ submit: error.message || 'Không thể lưu công thức' });
+    } finally {
+      setLoading(false);
     }
-
-    onClose();
   };
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -517,19 +530,31 @@ export const AddRecipeModal: React.FC<AddRecipeModalProps> = ({
                     </div>
                   </div>
 
+                  {/* Error message */}
+                  {errors.submit && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4">
+                      {errors.submit}
+                    </div>
+                  )}
+
                   <div className="flex justify-end space-x-3 pt-4">
                     <button
                       type="button"
                       onClick={onClose}
-                      className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                      disabled={loading}
+                      className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
                     >
                       Hủy
                     </button>
                     <button
                       type="submit"
-                      className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700"
+                      disabled={loading}
+                      className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 disabled:opacity-50 flex items-center"
                     >
-                      {recipe ? 'Cập nhật' : 'Thêm công thức'}
+                      {loading && (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      )}
+                      {loading ? 'Đang lưu...' : (recipe ? 'Cập nhật' : 'Thêm công thức')}
                     </button>
                   </div>
                 </form>

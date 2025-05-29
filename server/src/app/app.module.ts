@@ -26,6 +26,7 @@ import { ReportDataEntity } from "../entities/report-data.entity";
 import { ShoppingItemEntity } from "../entities/shopping-item.entity";
 import { ShoppingListEntity } from "../entities/shopping-list.entity";
 import { FoodCategoryModule } from "../modules/food-category/food-category.module";
+import { ProductsModule } from "../modules/products/products.module";
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { FoodCategoryModule } from "../modules/food-category/food-category.modul
     FridgeModule,
     GroupModule,
     FoodCategoryModule,
+    ProductsModule,
   ],
   controllers: [AppController],
   providers: [AppService, IsUniqueConstraint],

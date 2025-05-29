@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { useAppContext, Product } from '../../contexts/AppContext';
+import productService, { Product, CreateProductRequest } from '../../services/productService';
 
 interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   product?: Product;
+  onProductSaved?: (product: Product) => void;
 }
 
 const categories = [
@@ -27,9 +28,9 @@ const units = ['kg', 'g', 'lít', 'ml', 'gói', 'hộp', 'chai', 'ổ', 'quả',
 export const AddProductModal: React.FC<AddProductModalProps> = ({
   isOpen,
   onClose,
-  product
+  product,
+  onProductSaved
 }) => {
-  const { dispatch } = useAppContext();
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -99,34 +100,40 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
 
-    const productData: Product = {
-      id: product?.id || Date.now().toString(),
-      name: formData.name.trim(),
-      category: formData.category,
-      description: formData.description.trim(),
-      price: parseFloat(formData.price),
-      originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
-      unit: formData.unit,
-      image: formData.image || '/images/default-product.jpg',
-      rating: parseFloat(formData.rating),
-      stock: parseInt(formData.stock),
-      discount: formData.discount ? parseFloat(formData.discount) : undefined
-    };
+    try {
+      const productData: CreateProductRequest = {
+        name: formData.name.trim(),
+        category: formData.category,
+        description: formData.description.trim(),
+        price: parseFloat(formData.price),
+        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
+        unit: formData.unit,
+        image: formData.image || '/images/default-product.jpg',
+        rating: parseFloat(formData.rating),
+        stock: parseInt(formData.stock),
+        discount: formData.discount ? parseFloat(formData.discount) : undefined
+      };
 
-    if (product) {
-      dispatch({ type: 'UPDATE_PRODUCT', payload: productData });
-    } else {
-      dispatch({ type: 'ADD_PRODUCT', payload: productData });
+      let savedProduct: Product;
+      if (product) {
+        savedProduct = await productService.updateProduct(product.id, productData);
+      } else {
+        savedProduct = await productService.createProduct(productData);
+      }
+
+      onProductSaved?.(savedProduct);
+      onClose();
+    } catch (error: any) {
+      console.error('Failed to save product:', error);
+      // TODO: Show error message to user
     }
-
-    onClose();
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {

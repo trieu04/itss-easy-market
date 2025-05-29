@@ -1,89 +1,104 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShoppingBagIcon,
   ClockIcon,
   ChartBarIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
-  FireIcon
+  FireIcon,
+  CurrencyDollarIcon,
+  HeartIcon
 } from '@heroicons/react/24/outline';
-import { useAppContext } from '../contexts/AppContext';
+import dashboardService, { DashboardStats } from '../services/dashboardService';
+import HealthCheck from '../components/HealthCheck';
 
 const Dashboard: React.FC = () => {
-  const { state } = useAppContext();
-  const { products, shoppingLists, expenses, mealPlans, recipes } = state;
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Thống kê tổng quan
-  const stats = useMemo(() => {
-    const totalProducts = products.length;
-    const lowStockProducts = products.filter(p => p.stock <= 10).length;
-    const outOfStockProducts = products.filter(p => p.stock === 0).length;
-    
-    const activeShoppingLists = shoppingLists.filter(list => !list.completed).length;
-    const completedShoppingLists = shoppingLists.filter(list => list.completed).length;
-    
-    const thisMonth = new Date().getMonth();
-    const thisYear = new Date().getFullYear();
-    const monthlyExpenses = expenses
-      .filter(expense => {
-        const expenseDate = new Date(expense.date);
-        return expenseDate.getMonth() === thisMonth && expenseDate.getFullYear() === thisYear;
-      })
-      .reduce((total, expense) => total + expense.amount, 0);
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
 
-    const totalRecipes = recipes.length;
-    
-    const today = new Date().toISOString().split('T')[0];
-    const todayMealPlan = mealPlans.find(plan => plan.date === today);
-    const todayMealsPlanned = todayMealPlan ? 
-      [todayMealPlan.breakfast, todayMealPlan.lunch, todayMealPlan.dinner].filter(Boolean).length : 0;
-
-    return {
-      totalProducts,
-      lowStockProducts,
-      outOfStockProducts,
-      activeShoppingLists,
-      completedShoppingLists,
-      monthlyExpenses,
-      totalRecipes,
-      todayMealsPlanned
-    };
-  }, [products, shoppingLists, expenses, recipes, mealPlans]);
-
-  // Sản phẩm sắp hết hạn (giả lập - sắp hết stock)
-  const expiringSoonProducts = useMemo(() => {
-    return products
-      .filter(p => p.stock <= 10 && p.stock > 0)
-      .sort((a, b) => a.stock - b.stock)
-      .slice(0, 5);
-  }, [products]);
-
-  // Chi tiêu gần đây
-  const recentExpenses = useMemo(() => {
-    return expenses
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 5);
-  }, [expenses]);
-
-  // Danh sách mua sắm đang hoạt động
-  const activeShoppingListsData = useMemo(() => {
-    return shoppingLists.filter(list => !list.completed).slice(0, 3);
-  }, [shoppingLists]);
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(price);
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await dashboardService.getDashboardStats();
+      setStats(data);
+    } catch (err: any) {
+      setError(err.message || 'Không thể tải dữ liệu dashboard');
+      // Fallback data nếu API thất bại
+      setStats({
+        totalProducts: 0,
+        totalRecipes: 0,
+        totalShoppingLists: 0,
+        activeShoppingLists: 0,
+        recentActivities: [],
+        lowStockProducts: [],
+        popularRecipes: []
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'product_added':
+        return <ShoppingBagIcon className="h-5 w-5 text-blue-500" />;
+      case 'recipe_created':
+        return <FireIcon className="h-5 w-5 text-orange-500" />;
+      case 'shopping_list_created':
+        return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
+      case 'product_purchased':
+        return <CurrencyDollarIcon className="h-5 w-5 text-purple-500" />;
+      default:
+        return <ClockIcon className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-500"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-6">
+          {error}
+          <button 
+            onClick={loadDashboardData}
+            className="ml-4 text-red-800 underline"
+          >
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!stats) return null;
 
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Tổng quan tủ lạnh</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Tổng quan hệ thống</h1>
         <div className="text-sm text-gray-500">
           Cập nhật lúc {new Date().toLocaleString('vi-VN')}
         </div>
+      </div>
+
+      {/* Health Check */}
+      <div className="mb-6">
+        <HealthCheck />
       </div>
 
       {/* Stats Cards */}
@@ -101,15 +116,15 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Sản phẩm sắp hết */}
+        {/* Tổng công thức */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="p-3 rounded-full bg-yellow-100">
-              <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600" />
+            <div className="p-3 rounded-full bg-orange-100">
+              <FireIcon className="h-6 w-6 text-orange-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Sắp hết hàng</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.lowStockProducts}</p>
+              <p className="text-sm font-medium text-gray-500">Công thức</p>
+              <p className="text-2xl font-semibold text-gray-900">{stats.totalRecipes}</p>
             </div>
           </div>
         </div>
@@ -121,27 +136,27 @@ const Dashboard: React.FC = () => {
               <CheckCircleIcon className="h-6 w-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">DS mua sắm</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.activeShoppingLists}</p>
+              <p className="text-sm font-medium text-gray-500">DS đang hoạt động</p>
+              <p className="text-2xl font-semibold text-gray-900">{stats.activeShoppingLists ?? 0}</p>
             </div>
           </div>
         </div>
 
-        {/* Chi tiêu tháng */}
+        {/* Tổng DS mua sắm */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="p-3 rounded-full bg-red-100">
-              <ChartBarIcon className="h-6 w-6 text-red-600" />
+            <div className="p-3 rounded-full bg-purple-100">
+              <ChartBarIcon className="h-6 w-6 text-purple-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Chi tiêu tháng</p>
-              <p className="text-lg font-semibold text-gray-900">{formatPrice(stats.monthlyExpenses)}</p>
+              <p className="text-sm font-medium text-gray-500">Tổng DS mua sắm</p>
+              <p className="text-2xl font-semibold text-gray-900">{stats.totalShoppingLists ?? 0}</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* Sản phẩm sắp hết */}
         <div className="bg-white rounded-lg shadow">
           <div className="p-4 border-b border-gray-200">
@@ -151,21 +166,20 @@ const Dashboard: React.FC = () => {
             </h3>
           </div>
           <div className="p-4">
-            {expiringSoonProducts.length === 0 ? (
+            {(stats.lowStockProducts?.length ?? 0) === 0 ? (
               <p className="text-gray-500 text-center py-4">Tất cả sản phẩm đều đầy đủ</p>
             ) : (
               <div className="space-y-3">
-                {expiringSoonProducts.map((product) => (
+                {(stats.lowStockProducts || []).map((product) => (
                   <div key={product.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-900">{product.name}</h4>
-                      <p className="text-sm text-gray-500">{product.category}</p>
+                      <p className="text-sm text-gray-500">Tồn kho: {product.currentStock} {product.unit}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium text-yellow-700">
-                        Còn {product.stock} {product.unit}
+                        Cần thêm: {Math.max(0, product.minStock - product.currentStock)} {product.unit}
                       </p>
-                      <p className="text-xs text-gray-500">{formatPrice(product.price)}</p>
                     </div>
                   </div>
                 ))}
@@ -174,160 +188,81 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Danh sách mua sắm hoạt động */}
+        {/* Hoạt động gần đây */}
         <div className="bg-white rounded-lg shadow">
           <div className="p-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-              <ShoppingBagIcon className="h-5 w-5 text-green-500 mr-2" />
-              Danh sách mua sắm
+              <ClockIcon className="h-5 w-5 text-blue-500 mr-2" />
+              Hoạt động gần đây
             </h3>
           </div>
           <div className="p-4">
-            {activeShoppingListsData.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">Không có danh sách nào đang hoạt động</p>
+            {(stats.recentActivities?.length ?? 0) === 0 ? (
+              <p className="text-gray-500 text-center py-4">Chưa có hoạt động nào</p>
             ) : (
               <div className="space-y-3">
-                {activeShoppingListsData.map((list) => {
-                  const completedItems = list.items.filter(item => item.completed).length;
-                  const totalItems = list.items.length;
-                  const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
-                  
-                  return (
-                    <div key={list.id} className="p-3 border border-gray-200 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium text-gray-900">{list.name}</h4>
-                        <span className="text-xs text-gray-500">
-                          {completedItems}/{totalItems}
+                {(stats.recentActivities || []).map((activity) => (
+                  <div key={activity.id} className="flex items-start space-x-3">
+                    <div className="flex-shrink-0 p-2 bg-gray-100 rounded-full">
+                      {getActivityIcon(activity.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900">{activity.title}</p>
+                      <p className="text-sm text-gray-500">{activity.description}</p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(activity.timestamp).toLocaleString('vi-VN')}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Công thức phổ biến */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <FireIcon className="h-5 w-5 text-orange-500 mr-2" />
+              Công thức phổ biến
+            </h3>
+          </div>
+          <div className="p-4">
+            {(stats.popularRecipes?.length ?? 0) === 0 ? (
+              <p className="text-gray-500 text-center py-4">Chưa có công thức nào</p>
+            ) : (
+              <div className="space-y-3">
+                {(stats.popularRecipes || []).map((recipe) => (
+                  <div key={recipe.id} className="flex items-center space-x-3">
+                    <img
+                      src={recipe.image}
+                      alt={recipe.name}
+                      className="w-12 h-12 rounded-lg object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://via.placeholder.com/48x48?text=Recipe';
+                      }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{recipe.name}</p>
+                      <div className="flex items-center space-x-4 text-xs text-gray-500">
+                        <span>{recipe.viewCount} lượt xem</span>
+                        <span className="flex items-center">
+                          <HeartIcon className="h-3 w-3 mr-1" />
+                          {recipe.favoriteCount}
                         </span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${progress}%` }}
-                        ></div>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {new Date(list.date).toLocaleDateString('vi-VN')}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Chi tiêu gần đây */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-              <ChartBarIcon className="h-5 w-5 text-blue-500 mr-2" />
-              Chi tiêu gần đây
-            </h3>
-          </div>
-          <div className="p-4">
-            {recentExpenses.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">Chưa có chi tiêu nào</p>
-            ) : (
-              <div className="space-y-3">
-                {recentExpenses.map((expense) => (
-                  <div key={expense.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{expense.category}</h4>
-                      <p className="text-sm text-gray-500">{expense.description}</p>
-                      <p className="text-xs text-gray-400">
-                        {new Date(expense.date).toLocaleDateString('vi-VN')}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-gray-900">{formatPrice(expense.amount)}</p>
-                      <p className="text-xs text-gray-500">{expense.items.length} mặt hàng</p>
                     </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Kế hoạch bữa ăn hôm nay */}
-      <div className="mt-6 bg-white rounded-lg shadow">
-        <div className="p-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-            <FireIcon className="h-5 w-5 text-orange-500 mr-2" />
-            Kế hoạch bữa ăn hôm nay
-          </h3>
-        </div>
-        <div className="p-4">
-          {stats.todayMealsPlanned === 0 ? (
-            <div className="text-center py-8">
-              <ClockIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <p className="mt-2 text-gray-500">Chưa có kế hoạch bữa ăn cho hôm nay</p>
-              <p className="text-sm text-gray-400">Hãy lập kế hoạch trong trang Lập kế hoạch bữa ăn</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(() => {
-                const today = new Date().toISOString().split('T')[0];
-                const todayPlan = mealPlans.find(plan => plan.date === today);
-                
-                return (
-                  <>
-                    {/* Bữa sáng */}
-                    <div className="p-4 border border-gray-200 rounded-lg">
-                      <h4 className="font-medium text-gray-900 mb-2">🌅 Bữa sáng</h4>
-                      {todayPlan?.breakfast ? (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                          <h5 className="font-medium text-yellow-900">{todayPlan.breakfast.name}</h5>
-                          <p className="text-sm text-yellow-700">
-                            {todayPlan.breakfast.cookTime} phút • {todayPlan.breakfast.servings} phần
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-gray-500 text-sm">Chưa có kế hoạch</p>
-                      )}
-                    </div>
-
-                    {/* Bữa trưa */}
-                    <div className="p-4 border border-gray-200 rounded-lg">
-                      <h4 className="font-medium text-gray-900 mb-2">☀️ Bữa trưa</h4>
-                      {todayPlan?.lunch ? (
-                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                          <h5 className="font-medium text-orange-900">{todayPlan.lunch.name}</h5>
-                          <p className="text-sm text-orange-700">
-                            {todayPlan.lunch.cookTime} phút • {todayPlan.lunch.servings} phần
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-gray-500 text-sm">Chưa có kế hoạch</p>
-                      )}
-                    </div>
-
-                    {/* Bữa tối */}
-                    <div className="p-4 border border-gray-200 rounded-lg">
-                      <h4 className="font-medium text-gray-900 mb-2">🌙 Bữa tối</h4>
-                      {todayPlan?.dinner ? (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                          <h5 className="font-medium text-blue-900">{todayPlan.dinner.name}</h5>
-                          <p className="text-sm text-blue-700">
-                            {todayPlan.dinner.cookTime} phút • {todayPlan.dinner.servings} phần
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-gray-500 text-sm">Chưa có kế hoạch</p>
-                      )}
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-          )}
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="mt-6 bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Hành động nhanh</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <button 

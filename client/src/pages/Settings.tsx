@@ -74,9 +74,11 @@ const Settings: React.FC = () => {
     // Cập nhật preferences trong user profile
     if (authState.user) {
       updateProfile({
+        ...authState.user,
         preferences: {
-          ...authState.user.preferences,
-          ...settings.app
+          language: settings.app.language,
+          theme: settings.app.theme,
+          notifications: settings.notifications.email
         }
       });
     }
