@@ -22,9 +22,9 @@ export class FridgeController {
       unit: "liter",
       category: "dairy",
       location: "main_compartment",
-      expiryDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now
+      expiryDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
       status: "expiring",
-      addedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
+      addedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     },
     {
       id: "2",
@@ -33,9 +33,9 @@ export class FridgeController {
       unit: "pieces",
       category: "fruits",
       location: "crisper",
-      expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
+      expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       status: "fresh",
-      addedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+      addedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     },
     {
       id: "3",
@@ -44,10 +44,10 @@ export class FridgeController {
       unit: "loaf",
       category: "bakery",
       location: "main_compartment",
-      expiryDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago (expired)
+      expiryDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
       status: "expired",
-      addedDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
-    }
+      addedDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    },
   ];
 
   @Get("items")
@@ -74,7 +74,7 @@ export class FridgeController {
       status: "fresh",
       addedDate: new Date().toISOString(),
     };
-    
+
     this.mockItems.push(newItem);
     return newItem;
   }
@@ -85,7 +85,7 @@ export class FridgeController {
     if (itemIndex === -1) {
       return { error: "Item not found" };
     }
-    
+
     this.mockItems[itemIndex] = { ...this.mockItems[itemIndex], ...data };
     return this.mockItems[itemIndex];
   }
@@ -96,7 +96,7 @@ export class FridgeController {
     if (itemIndex === -1) {
       return { error: "Item not found" };
     }
-    
+
     this.mockItems.splice(itemIndex, 1);
     return { success: true };
   }
@@ -107,15 +107,15 @@ export class FridgeController {
     const expired = this.mockItems.filter(item => item.status === "expired").length;
     const expiringSoon = this.mockItems.filter(item => item.status === "expiring").length;
     const fresh = this.mockItems.filter(item => item.status === "fresh").length;
-    
+
     const categoryCount = this.mockItems.reduce((acc, item) => {
       acc[item.category] = (acc[item.category] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    
+
     const mostCommonCategory = Object.entries(categoryCount)
       .sort(([,a], [,b]) => b - a)[0]?.[0] || "N/A";
-    
+
     const lowStockItems = this.mockItems.filter(item => item.quantity < 2);
 
     return {
@@ -124,12 +124,12 @@ export class FridgeController {
       expiringSoon,
       fresh,
       mostCommonCategory,
-      lowStockItems: lowStockItems.map(item => ({ 
-        id: item.id, 
-        name: item.name, 
+      lowStockItems: lowStockItems.map(item => ({
+        id: item.id,
+        name: item.name,
         quantity: item.quantity,
-        unit: item.unit
-      }))
+        unit: item.unit,
+      })),
     };
   }
 
@@ -137,7 +137,7 @@ export class FridgeController {
   getExpiringItems(@Query("days") days: string = "3") {
     const daysNum = Number.parseInt(days, 10) || 3;
     const cutoffDate = new Date(Date.now() + daysNum * 24 * 60 * 60 * 1000);
-    
+
     return this.mockItems.filter(item => {
       const expiryDate = new Date(item.expiryDate);
       return expiryDate <= cutoffDate && expiryDate > new Date();
@@ -155,15 +155,15 @@ export class FridgeController {
     if (!item) {
       return { error: "Item not found" };
     }
-    
+
     item.quantity = Math.max(0, item.quantity - (data.quantity || 1));
-    
+
     if (item.quantity === 0) {
       const itemIndex = this.mockItems.findIndex(i => i.id === id);
       this.mockItems.splice(itemIndex, 1);
       return { message: "Item consumed completely and removed" };
     }
-    
+
     return item;
   }
 
@@ -173,7 +173,7 @@ export class FridgeController {
     if (!item) {
       return { error: "Item not found" };
     }
-    
+
     item.location = data.location;
     return item;
   }
@@ -190,22 +190,22 @@ export class FridgeController {
 
   @Get("notify-expiration")
   notifyExpiration() {
-    const expiring = this.getExpiringItems("2"); // Items expiring in 2 days
+    const expiring = this.getExpiringItems("2");
     const expired = this.getExpiredItems();
-    
+
     return {
       expiring: expiring.map(item => ({
         id: item.id,
         name: item.name,
         expiryDate: item.expiryDate,
-        daysLeft: Math.ceil((new Date(item.expiryDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+        daysLeft: Math.ceil((new Date(item.expiryDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000)),
       })),
       expired: expired.map(item => ({
         id: item.id,
         name: item.name,
         expiryDate: item.expiryDate,
-        daysOverdue: Math.ceil((Date.now() - new Date(item.expiryDate).getTime()) / (24 * 60 * 60 * 1000))
-      }))
+        daysOverdue: Math.ceil((Date.now() - new Date(item.expiryDate).getTime()) / (24 * 60 * 60 * 1000)),
+      })),
     };
   }
 }

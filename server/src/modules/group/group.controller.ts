@@ -16,10 +16,10 @@ import { GroupService } from "./group.service";
   model: {
     type: GroupEntity,
   },
-    routes: {
-        only: ["getManyBase", "getOneBase", "createOneBase", "updateOneBase", "deleteOneBase"],
-    },
+  routes: {
+    only: ["getManyBase", "getOneBase", "createOneBase", "updateOneBase", "deleteOneBase"],
+  },
 })
-export class GroupController implements CrudController<GroupEntity>{
-    constructor(public service: GroupService) {}
+export class GroupController implements CrudController<GroupEntity> {
+  constructor(public service: GroupService) {}
 }

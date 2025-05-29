@@ -3,6 +3,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import './App.css';
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 import { UIProvider } from './contexts/UIContext';
+<<<<<<< HEAD
+=======
+import { useInitialData } from './hooks/useInitialData';
+>>>>>>> 9a2c0e03ae62adbc3b845a8ef2bfb046436223d7
 
 // Components
 import Layout from './components/layout/Layout';

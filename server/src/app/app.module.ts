@@ -26,7 +26,11 @@ import { ReportDataEntity } from "../entities/report-data.entity";
 import { ShoppingItemEntity } from "../entities/shopping-item.entity";
 import { ShoppingListEntity } from "../entities/shopping-list.entity";
 import { FoodCategoryModule } from "../modules/food-category/food-category.module";
+<<<<<<< HEAD
 import { ProductsModule } from "../modules/products/products.module";
+=======
+import { UserDataModule } from "../modules/user-data/user-data.module";
+>>>>>>> 9a2c0e03ae62adbc3b845a8ef2bfb046436223d7
 
 @Module({
   imports: [
@@ -58,7 +62,11 @@ import { ProductsModule } from "../modules/products/products.module";
     FridgeModule,
     GroupModule,
     FoodCategoryModule,
+<<<<<<< HEAD
     ProductsModule,
+=======
+    UserDataModule,
+>>>>>>> 9a2c0e03ae62adbc3b845a8ef2bfb046436223d7
   ],
   controllers: [AppController],
   providers: [AppService, IsUniqueConstraint],
