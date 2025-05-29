@@ -10,8 +10,8 @@ import { RolesGuard } from "../auth/guards/roles.guard";
 @UseGuards(AuthGuard, RolesGuard)
 @Roles([UserRoleEnum.USER])
 export class ReportController {
-    @Get("generate-report")
-    generateReport() {
-        return [];
-    }
+  @Get("generate-report")
+  generateReport() {
+    return [];
+  }
 }

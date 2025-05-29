@@ -5,8 +5,8 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 
 @Injectable()
-export class ShoppingListService extends TypeOrmCrudService<ShoppingListEntity>{
-    constructor(@InjectRepository(ShoppingListEntity) public shoppingListRepo: Repository<ShoppingListEntity>) {
-        super(shoppingListRepo);
-    }
+export class ShoppingListService extends TypeOrmCrudService<ShoppingListEntity> {
+  constructor(@InjectRepository(ShoppingListEntity) public shoppingListRepo: Repository<ShoppingListEntity>) {
+    super(shoppingListRepo);
+  }
 }

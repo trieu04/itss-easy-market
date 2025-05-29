@@ -14,20 +14,20 @@ import { ShoppingListService } from "./shopping-list.service";
 @UseGuards(AuthGuard, RolesGuard)
 @Roles([UserRoleEnum.USER])
 @Crud({
-    model: {
-        type: ShoppingListEntity,
+  model: {
+    type: ShoppingListEntity,
+  },
+  routes: {
+    only: ["getManyBase", "getOneBase", "createOneBase", "updateOneBase", "deleteOneBase"],
+  },
+  query: {
+    join: {
+      user: {
+        eager: true,
+      },
     },
-    routes: {
-        only: ["getManyBase", "getOneBase", "createOneBase", "updateOneBase", "deleteOneBase"],
-    },
-    query: {
-        join: {
-            user: {
-                eager: true,
-            },
-        },
-    }
+  },
 })
-export class ShoppingListController implements CrudController<ShoppingListEntity>{
-    constructor(public service: ShoppingListService) {}
+export class ShoppingListController implements CrudController<ShoppingListEntity> {
+  constructor(public service: ShoppingListService) {}
 }

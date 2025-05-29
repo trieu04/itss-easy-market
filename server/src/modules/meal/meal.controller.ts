@@ -17,10 +17,10 @@ import { RolesGuard } from "../auth/guards/roles.guard";
   model: {
     type: MealEntity,
   },
-    routes: {
-        only: ["getManyBase", "getOneBase", "createOneBase", "updateOneBase", "deleteOneBase"],
-    },
+  routes: {
+    only: ["getManyBase", "getOneBase", "createOneBase", "updateOneBase", "deleteOneBase"],
+  },
 })
-export class MealController implements CrudController<MealEntity>{
-    constructor(public service: MealService) {}
+export class MealController implements CrudController<MealEntity> {
+  constructor(public service: MealService) {}
 }
