@@ -1,20 +1,5 @@
 import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
-<<<<<<< HEAD
 import authService, { User } from '../services/authService';
-=======
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  preferences: {
-    language: string;
-    theme: string;
-    notifications: boolean;
-  };
-}
->>>>>>> 9a2c0e03ae62adbc3b845a8ef2bfb046436223d7
 
 interface AuthState {
   user: User | null;
@@ -90,43 +75,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           dispatch({ type: 'LOGIN_SUCCESS', payload: user });
         }
       } catch (error) {
-<<<<<<< HEAD
         // Token không hợp lệ, xóa khỏi localStorage
         authService.logout();
         console.error('Token verification failed:', error);
       } finally {
         dispatch({ type: 'SET_LOADING', payload: false });
-=======
-        localStorage.removeItem('user');
-      }
-    }
-    dispatch({ type: 'SET_LOADING', payload: false });
-  }, []);
-
-  const login = async (email: string, password: string) => {
-    dispatch({ type: 'SET_LOADING', payload: true });
-    
-    // Giả lập API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock user data - trong thực tế sẽ gọi API
-    const mockUser: User = {
-      id: '1',
-      name: 'Người Dùng',
-      email: email,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent('Người Dùng')}&background=10b981&color=fff`,
-      preferences: {
-        language: 'vi',
-        theme: 'light',
-        notifications: true,
->>>>>>> 9a2c0e03ae62adbc3b845a8ef2bfb046436223d7
       }
     };
 
     initAuth();
   }, []);
 
-<<<<<<< HEAD
   const login = async (email: string, password: string) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     
@@ -162,32 +121,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     authService.logout();
-=======
-  const register = async (name: string, email: string, password: string) => {
-    dispatch({ type: 'SET_LOADING', payload: true });
-    
-    // Giả lập API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const newUser: User = {
-      id: Date.now().toString(),
-      name: name,
-      email: email,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff`,
-      preferences: {
-        language: 'vi',
-        theme: 'light',
-        notifications: true,
-      }
-    };
-
-    localStorage.setItem('user', JSON.stringify(newUser));
-    dispatch({ type: 'LOGIN_SUCCESS', payload: newUser });
-  };
-
-  const logout = () => {
-    localStorage.removeItem('user');
->>>>>>> 9a2c0e03ae62adbc3b845a8ef2bfb046436223d7
     dispatch({ type: 'LOGOUT' });
   };
 
