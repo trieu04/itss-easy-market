@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
-import api from '../services/api'; 
 
 interface User {
   id: string;
@@ -23,7 +22,6 @@ interface AuthContextType {
   state: AuthState;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
   logout: () => void;
   updateProfile: (updates: Partial<User>) => void;
 }
@@ -90,8 +88,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     dispatch({ type: 'SET_LOADING', payload: false });
   }, []);
 
-
-const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     
     // Giả lập API call
@@ -114,50 +111,30 @@ const login = async (email: string, password: string) => {
     dispatch({ type: 'LOGIN_SUCCESS', payload: mockUser });
   };
 
-  // API Call  
-  // const login = async (email: string, password: string) => {
-  //   dispatch({ type: 'SET_LOADING', payload: true });
-  //   try {
-  //     const response = await api.post('/auth/sign-in', {
-  //       email: email,
-  //       password,
-  //     });
-  //     const { accessToken, user } = response.data;
-  //     localStorage.setItem('accessToken', accessToken);
-  //     localStorage.setItem('user', JSON.stringify(user));
-  //     dispatch({ type: 'LOGIN_SUCCESS', payload: user });
-  //   } catch (error: any) {
-  //     alert(error?.response?.data?.message || 'Đăng nhập thất bại');
-  //   } finally {
-  //     dispatch({ type: 'SET_LOADING', payload: false });
-  //   }
-  // };
-
-
   const register = async (name: string, email: string, password: string) => {
     dispatch({ type: 'SET_LOADING', payload: true });
-    try {
-      const response = await api.post('/auth/sign-up', { name, email, password });
-      const { accessToken, user } = response.data;
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('user', JSON.stringify(user));
-      dispatch({ type: 'LOGIN_SUCCESS', payload: user });
-    } catch (error: any) {
-      alert(error?.response?.data?.message || 'Đăng ký thất bại');
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
+    
+    // Giả lập API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const newUser: User = {
+      id: Date.now().toString(),
+      name: name,
+      email: email,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff`,
+      preferences: {
+        language: 'vi',
+        theme: 'light',
+        notifications: true,
+      }
+    };
+
+    localStorage.setItem('user', JSON.stringify(newUser));
+    dispatch({ type: 'LOGIN_SUCCESS', payload: newUser });
   };
-
-
-  const loginWithGoogle = async () => {
-  const response = await api.get('/auth/google-oauth');
-  window.location.href = response.data.url;
-};
 
   const logout = () => {
     localStorage.removeItem('user');
-    localStorage.removeItem('accessToken');
     dispatch({ type: 'LOGOUT' });
   };
 
@@ -170,7 +147,7 @@ const login = async (email: string, password: string) => {
   };
 
   return (
-    <AuthContext.Provider value={{ state, login, register, logout, updateProfile, loginWithGoogle  }}>
+    <AuthContext.Provider value={{ state, login, register, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
