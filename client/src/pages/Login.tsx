@@ -7,7 +7,7 @@ const Login: React.FC = () => {
   const { login, state } = useAuthContext();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -17,16 +17,16 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError('');
 
-    if (!formData.email || !formData.password) {
+    if (!formData.username || !formData.password) {
       setError('Vui lòng điền đầy đủ thông tin');
       return;
     }
 
     try {
-      await login(formData.email, formData.password);
+      await login(formData.username, formData.password);
       navigate('/dashboard');
-    } catch (err) {
-      setError('Email hoặc mật khẩu không chính xác');
+    } catch (err: any) {
+      setError(err.message || 'Tên đăng nhập hoặc mật khẩu không chính xác');
     }
   };
 
@@ -63,19 +63,19 @@ const Login: React.FC = () => {
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                Tên đăng nhập
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
                 required
-                value={formData.email}
+                value={formData.username}
                 onChange={handleChange}
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                placeholder="Nhập email của bạn"
+                placeholder="Nhập tên đăng nhập"
               />
             </div>
 
@@ -124,9 +124,9 @@ const Login: React.FC = () => {
             </div>
 
             <div className="text-sm">
-              <a href="#" className="font-medium text-green-600 hover:text-green-500">
+              <Link to="/forgot-password" className="font-medium text-green-600 hover:text-green-500">
                 Quên mật khẩu?
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -164,7 +164,7 @@ const Login: React.FC = () => {
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <h3 className="text-sm font-medium text-blue-900 mb-2">Thông tin demo:</h3>
           <p className="text-sm text-blue-700">
-            Sử dụng bất kỳ email và mật khẩu nào để đăng nhập vào ứng dụng demo.
+            Tạo tài khoản với tên bắt đầu bằng "demo" để tự động lấy dữ liệu demo. Ví dụ demo 123.
           </p>
         </div>
       </div>

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
+import httpClient from '../services/httpClient';
 
 // Types
 export interface Product {
@@ -119,30 +120,30 @@ function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
-    
+
     case 'SET_ERROR':
       return { ...state, error: action.payload };
-    
+
     case 'ADD_PRODUCT':
       return { ...state, products: [...state.products, action.payload] };
-    
+
     case 'UPDATE_PRODUCT':
       return {
         ...state,
-        products: state.products.map(p => 
+        products: state.products.map(p =>
           p.id === action.payload.id ? action.payload : p
         ),
       };
-    
+
     case 'DELETE_PRODUCT':
       return {
         ...state,
         products: state.products.filter(p => p.id !== action.payload),
       };
-    
+
     case 'ADD_SHOPPING_LIST':
       return { ...state, shoppingLists: [...state.shoppingLists, action.payload] };
-    
+
     case 'UPDATE_SHOPPING_LIST':
       return {
         ...state,
@@ -150,13 +151,13 @@ function appReducer(state: AppState, action: AppAction): AppState {
           list.id === action.payload.id ? action.payload : list
         ),
       };
-    
+
     case 'DELETE_SHOPPING_LIST':
       return {
         ...state,
         shoppingLists: state.shoppingLists.filter(list => list.id !== action.payload),
       };
-    
+
     case 'ADD_SHOPPING_ITEM':
       return {
         ...state,
@@ -166,38 +167,38 @@ function appReducer(state: AppState, action: AppAction): AppState {
             : list
         ),
       };
-    
+
     case 'UPDATE_SHOPPING_ITEM':
       return {
         ...state,
         shoppingLists: state.shoppingLists.map(list =>
           list.id === action.payload.listId
             ? {
-                ...list,
-                items: list.items.map(item =>
-                  item.id === action.payload.item.id ? action.payload.item : item
-                ),
-              }
+              ...list,
+              items: list.items.map(item =>
+                item.id === action.payload.item.id ? action.payload.item : item
+              ),
+            }
             : list
         ),
       };
-    
+
     case 'DELETE_SHOPPING_ITEM':
       return {
         ...state,
         shoppingLists: state.shoppingLists.map(list =>
           list.id === action.payload.listId
             ? {
-                ...list,
-                items: list.items.filter(item => item.id !== action.payload.itemId),
-              }
+              ...list,
+              items: list.items.filter(item => item.id !== action.payload.itemId),
+            }
             : list
         ),
       };
-    
+
     case 'ADD_RECIPE':
       return { ...state, recipes: [...state.recipes, action.payload] };
-    
+
     case 'UPDATE_RECIPE':
       return {
         ...state,
@@ -205,16 +206,16 @@ function appReducer(state: AppState, action: AppAction): AppState {
           recipe.id === action.payload.id ? action.payload : recipe
         ),
       };
-    
+
     case 'DELETE_RECIPE':
       return {
         ...state,
         recipes: state.recipes.filter(recipe => recipe.id !== action.payload),
       };
-    
+
     case 'ADD_MEAL_PLAN':
       return { ...state, mealPlans: [...state.mealPlans, action.payload] };
-    
+
     case 'UPDATE_MEAL_PLAN':
       return {
         ...state,
@@ -222,16 +223,16 @@ function appReducer(state: AppState, action: AppAction): AppState {
           plan.id === action.payload.id ? action.payload : plan
         ),
       };
-    
+
     case 'DELETE_MEAL_PLAN':
       return {
         ...state,
         mealPlans: state.mealPlans.filter(plan => plan.id !== action.payload),
       };
-    
+
     case 'ADD_EXPENSE':
       return { ...state, expenses: [...state.expenses, action.payload] };
-    
+
     case 'UPDATE_EXPENSE':
       return {
         ...state,
@@ -239,13 +240,13 @@ function appReducer(state: AppState, action: AppAction): AppState {
           expense.id === action.payload.id ? action.payload : expense
         ),
       };
-    
+
     case 'DELETE_EXPENSE':
       return {
         ...state,
         expenses: state.expenses.filter(expense => expense.id !== action.payload),
       };
-    
+
     case 'ADD_TO_CART':
       const existingCartItem = state.cart.find(item => item.productId === action.payload.productId);
       if (existingCartItem) {
@@ -259,13 +260,13 @@ function appReducer(state: AppState, action: AppAction): AppState {
         };
       }
       return { ...state, cart: [...state.cart, action.payload] };
-    
+
     case 'REMOVE_FROM_CART':
       return {
         ...state,
         cart: state.cart.filter(item => item.productId !== action.payload),
       };
-    
+
     case 'UPDATE_CART_QUANTITY':
       return {
         ...state,
@@ -275,10 +276,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
             : item
         ),
       };
-    
+
     case 'CLEAR_CART':
       return { ...state, cart: [] };
-    
+
     case 'TOGGLE_FAVORITE':
       const isFavorite = state.favorites.includes(action.payload);
       return {
@@ -287,10 +288,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
           ? state.favorites.filter(id => id !== action.payload)
           : [...state.favorites, action.payload],
       };
-    
+
     case 'LOAD_DATA':
       return { ...state, ...action.payload };
-    
+
     default:
       return state;
   }
@@ -317,23 +318,119 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // Save data to localStorage whenever state changes
+  // This ref helps to identify if the initial data loading (from server/localStorage)
+  // has completed. It's used to prevent the data synchronization effect from
+  // running during the initial data population phase.
+  const initialLoadEffectRan = useRef(false);
+
+  // Load data from server and/or localStorage on component mount
   useEffect(() => {
+    const loadData = async () => {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      let dataToLoad: Partial<AppState> | null = null;
+      let serverFetchError: string | null = null;
+
+      try {
+        console.log('Attempting to load data from server...');
+        const data = await httpClient.get<{data: Partial<AppState>}>("/user-data");
+        if (data) {
+          dataToLoad = data.data;
+          localStorage.setItem('smartMealData', JSON.stringify(dataToLoad));
+          console.log('Data loaded from server and saved to localStorage.');
+          dispatch({ type: 'SET_ERROR', payload: null });
+        } else {
+          console.log('No data returned from server or server data was empty.');
+        }
+      } catch (error: any) {
+        console.error('Error loading data from server:', error);
+        serverFetchError = error.message || 'Failed to load data from server. Will try local storage.';
+      }
+
+      if (!dataToLoad) {
+        console.log('Attempting to load data from localStorage...');
+        try {
+          const savedData = localStorage.getItem('smartMealData');
+          if (savedData) {
+            dataToLoad = JSON.parse(savedData) as Partial<AppState>;
+            console.log('Data loaded from localStorage.');
+            if (!serverFetchError) {
+              dispatch({ type: 'SET_ERROR', payload: null });
+            }
+          } else {
+            console.log('No data found in localStorage.');
+            if (!serverFetchError) dispatch({ type: 'SET_ERROR', payload: null });
+          }
+        } catch (localError: any) {
+          console.error('Error loading data from localStorage:', localError);
+          let combinedError = 'Failed to load data from localStorage.';
+          if (serverFetchError) {
+            combinedError = `${serverFetchError} Additionally, ${combinedError.toLowerCase()}`;
+          }
+          dispatch({ type: 'SET_ERROR', payload: combinedError });
+        }
+      }
+
+      if (dataToLoad) {
+        dispatch({ type: 'LOAD_DATA', payload: dataToLoad });
+      } else {
+        console.log('No data available from server or localStorage. Using initial state.');
+      }
+
+      dispatch({ type: 'SET_LOADING', payload: false });
+      initialLoadEffectRan.current = true;
+    };
+
+    loadData();
+  }, [dispatch]);
+
+  // Save data to localStorage and synchronize with server when relevant state parts change.
+  useEffect(() => {
+    if (!initialLoadEffectRan.current || state.loading) {
+      return;
+    }
+
+    const dataToSave = {
+      products: state.products,
+      shoppingLists: state.shoppingLists,
+      recipes: state.recipes,
+      mealPlans: state.mealPlans,
+      expenses: state.expenses,
+      cart: state.cart,
+      favorites: state.favorites,
+    };
+
     try {
-      const dataToSave = {
-        products: state.products,
-        shoppingLists: state.shoppingLists,
-        recipes: state.recipes,
-        mealPlans: state.mealPlans,
-        expenses: state.expenses,
-        cart: state.cart,
-        favorites: state.favorites,
-      };
       localStorage.setItem('smartMealData', JSON.stringify(dataToSave));
     } catch (error) {
       console.error('Error saving data to localStorage:', error);
     }
-  }, [state]);
+
+    const syncData = async () => {
+      try {
+        await httpClient.post<void>("/user-data", dataToSave);
+        console.log('Data successfully synced with server.');
+        if (state.error?.startsWith('Failed to sync data')) {
+          dispatch({ type: 'SET_ERROR', payload: null });
+        }
+      } catch (error: any) {
+        console.error('Error syncing data to server:', error);
+        const errorMessage = error.message || 'Failed to sync data with server. Data remains saved locally.';
+        // dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      }
+    };
+
+    syncData();
+  }, [
+    state.products,
+    state.shoppingLists,
+    state.recipes,
+    state.mealPlans,
+    state.expenses,
+    state.cart,
+    state.favorites,
+    state.error,
+    dispatch
+  ]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>
