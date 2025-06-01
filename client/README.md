@@ -2,6 +2,10 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Environment Setup
+
+Before running the project, create a `.env` file in the root of the project directory to store environment variables. Refer to the `.env.example` file for required variables and example values. Make sure to update the variables according to your local setup.
+
 ## Available Scripts
 
 In the project directory, you can run:
