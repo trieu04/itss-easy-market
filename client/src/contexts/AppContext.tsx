@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
-import { api } from '../services/api';
+import httpClient from '../services/httpClient';
 
 // Types
 export interface Product {
@@ -327,28 +327,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     const loadData = async () => {
       dispatch({ type: 'SET_LOADING', payload: true });
-      // Do not clear error here, allow errors from previous operations (like sync) to persist if needed
-      // dispatch({ type: 'SET_ERROR', payload: null }); 
       let dataToLoad: Partial<AppState> | null = null;
       let serverFetchError: string | null = null;
 
       try {
         console.log('Attempting to load data from server...');
-        // The server is expected to return a response with a 'data' key, 
-        // which itself contains the application data (e.g., { data: { products: [...] } })
-        const response = await api.get<{ data: Partial<AppState> }>("/user-data");
-        if (response.data && response.data.data && Object.keys(response.data.data).length > 0) {
-          dataToLoad = response.data.data;
+        const data = await httpClient.get<{data: Partial<AppState>}>("/user-data");
+        if (data) {
+          dataToLoad = data.data;
           localStorage.setItem('smartMealData', JSON.stringify(dataToLoad));
           console.log('Data loaded from server and saved to localStorage.');
-          dispatch({ type: 'SET_ERROR', payload: null }); // Clear any previous errors if server load is successful
+          dispatch({ type: 'SET_ERROR', payload: null });
         } else {
-          console.log('No data returned from server or server data field was empty.');
+          console.log('No data returned from server or server data was empty.');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading data from server:', error);
-        serverFetchError = 'Failed to load data from server. Will try local storage.';
-        // dispatch({ type: 'SET_ERROR', payload: serverFetchError });
+        serverFetchError = error.message || 'Failed to load data from server. Will try local storage.';
       }
 
       if (!dataToLoad) {
@@ -363,16 +358,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
           } else {
             console.log('No data found in localStorage.');
-            // If server also had no data (but no error) and local is empty, ensure no error state.
             if (!serverFetchError) dispatch({ type: 'SET_ERROR', payload: null });
           }
-        } catch (localError) {
+        } catch (localError: any) {
           console.error('Error loading data from localStorage:', localError);
           let combinedError = 'Failed to load data from localStorage.';
           if (serverFetchError) {
             combinedError = `${serverFetchError} Additionally, ${combinedError.toLowerCase()}`;
           }
-          // dispatch({ type: 'SET_ERROR', payload: combinedError });
+          dispatch({ type: 'SET_ERROR', payload: combinedError });
         }
       }
 
@@ -387,21 +381,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispatch])
+  }, [dispatch]);
 
   // Save data to localStorage and synchronize with server when relevant state parts change.
   useEffect(() => {
-    // Prevent this effect from running until the initial data load has finished.
-    // This avoids immediately POSTing the data that was just GET.
-    if (!initialLoadEffectRan.current) {
-      return;
-    }
-
-    // If a global loading state is active (e.g., from the initial load itself,
-    // or potentially other operations), skip synchronization.
-    if (state.loading) {
-      // console.log("Sync effect skipped: global loading state is active.");
+    if (!initialLoadEffectRan.current || state.loading) {
       return;
     }
 
@@ -415,35 +399,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       favorites: state.favorites,
     };
 
-    // Always save to localStorage for offline capability and quick recovery.
     try {
       localStorage.setItem('smartMealData', JSON.stringify(dataToSave));
-      // console.log('Data saved to localStorage on state change.');
     } catch (error) {
       console.error('Error saving data to localStorage:', error);
-      // Optionally, dispatch a more critical error if local saving fails:
-      // dispatch({ type: 'SET_ERROR', payload: 'CRITICAL: Failed to save data locally!' });
     }
 
-    // Asynchronously synchronize data with the server.
     const syncData = async () => {
       try {
-        // console.log('Syncing data with server...', dataToSave);
-        await api.post("/user-data", dataToSave);
+        await httpClient.post<void>("/user-data", dataToSave);
         console.log('Data successfully synced with server.');
-        // If a previous error was specifically about syncing, clear it upon successful sync.
-        if (state.error && state.error.startsWith('Failed to sync data')) {
-          // dispatch({ type: 'SET_ERROR', payload: null });
+        if (state.error?.startsWith('Failed to sync data')) {
+          dispatch({ type: 'SET_ERROR', payload: null });
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error syncing data to server:', error);
-        // dispatch({ type: 'SET_ERROR', payload: 'Failed to sync data with server. Data remains saved locally.' });
+        const errorMessage = error.message || 'Failed to sync data with server. Data remains saved locally.';
+        // dispatch({ type: 'SET_ERROR', payload: errorMessage });
       }
     };
 
     syncData();
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     state.products,
     state.shoppingLists,
@@ -452,7 +428,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     state.expenses,
     state.cart,
     state.favorites,
-    dispatch // dispatch is used for SET_ERROR.
+    state.error,
+    dispatch
   ]);
 
   return (

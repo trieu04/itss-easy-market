@@ -1,16 +1,5 @@
-import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  preferences: {
-    language: string;
-    theme: string;
-    notifications: boolean;
-  };
-}
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, FC } from 'react';
+import authService, { User } from '../services/authService';
 
 interface AuthState {
   user: User | null;
@@ -20,10 +9,14 @@ interface AuthState {
 
 interface AuthContextType {
   state: AuthState;
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   updateProfile: (updates: Partial<User>) => void;
+}
+
+interface AuthProviderProps {
+  children: ReactNode;
 }
 
 const initialState: AuthState = {
@@ -32,7 +25,7 @@ const initialState: AuthState = {
   loading: true,
 };
 
-type AuthAction = 
+type AuthAction =
   | { type: 'LOGIN_SUCCESS'; payload: User }
   | { type: 'LOGOUT' }
   | { type: 'SET_LOADING'; payload: boolean }
@@ -71,70 +64,69 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   useEffect(() => {
-    // Kiểm tra localStorage cho user đã đăng nhập
+    // Check for saved token and user data
+    const token = authService.getToken();
     const savedUser = localStorage.getItem('user');
-    if (savedUser) {
+
+    if (token && savedUser) {
       try {
         const user = JSON.parse(savedUser);
         dispatch({ type: 'LOGIN_SUCCESS', payload: user });
       } catch (error) {
-        localStorage.removeItem('user');
+        authService.logout();
       }
     }
     dispatch({ type: 'SET_LOADING', payload: false });
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (username: string, password: string) => {
     dispatch({ type: 'SET_LOADING', payload: true });
-    
-    // Giả lập API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock user data - trong thực tế sẽ gọi API
-    const mockUser: User = {
-      id: '1',
-      name: 'Người Dùng',
-      email: email,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent('Người Dùng')}&background=10b981&color=fff`,
-      preferences: {
-        language: 'vi',
-        theme: 'light',
-        notifications: true,
-      }
-    };
-
-    localStorage.setItem('user', JSON.stringify(mockUser));
-    dispatch({ type: 'LOGIN_SUCCESS', payload: mockUser });
+    try {
+      const response = await authService.login({ username, password });
+      dispatch({
+        type: 'LOGIN_SUCCESS', payload: {
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent('Người Dùng')}&background=10b981&color=fff`,
+          preferences: {
+            language: 'vi',
+            theme: 'light',
+            notifications: true,
+          },
+          ...response.user
+        }
+      });
+    } catch (error) {
+      dispatch({ type: 'SET_LOADING', payload: false });
+      throw error;
+    }
   };
 
   const register = async (name: string, email: string, password: string) => {
     dispatch({ type: 'SET_LOADING', payload: true });
-    
-    // Giả lập API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const newUser: User = {
-      id: Date.now().toString(),
-      name: name,
-      email: email,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff`,
-      preferences: {
-        language: 'vi',
-        theme: 'light',
-        notifications: true,
-      }
-    };
-
-    localStorage.setItem('user', JSON.stringify(newUser));
-    dispatch({ type: 'LOGIN_SUCCESS', payload: newUser });
+    try {
+      const response = await authService.register({ name, email, password });
+      dispatch({
+        type: 'LOGIN_SUCCESS', payload: {
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent('Người Dùng')}&background=10b981&color=fff`,
+          preferences: {
+            language: 'vi',
+            theme: 'light',
+            notifications: true,
+          },
+          ...response.user
+        }
+      });
+    } catch (error) {
+      dispatch({ type: 'SET_LOADING', payload: false });
+      throw error;
+    }
   };
 
   const logout = () => {
-    localStorage.removeItem('user');
+    authService.logout();
     dispatch({ type: 'LOGOUT' });
   };
 
