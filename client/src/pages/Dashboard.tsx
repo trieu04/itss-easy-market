@@ -77,6 +77,34 @@ const Dashboard: React.FC = () => {
     }).format(price);
   };
 
+  // Mock chuyển đổi products sang dạng có expiryDate/location
+  const fridgeItems = useMemo(() => {
+    return products.map(product => {
+      const addedDaysAgo = Math.floor(Math.random() * 14);
+      const expiryDaysFromNow = Math.floor(Math.random() * 30) - 10;
+      const addedDate = new Date();
+      addedDate.setDate(addedDate.getDate() - addedDaysAgo);
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + expiryDaysFromNow);
+      const locations = ['fridge', 'freezer', 'pantry'];
+      const location = locations[Math.floor(Math.random() * locations.length)];
+      return {
+        ...product,
+        location,
+        expiryDate: expiryDate.toISOString().split('T')[0],
+        addedDate: addedDate.toISOString().split('T')[0]
+      };
+    });
+  }, [products]);
+
+  const today = new Date().toISOString().split('T')[0];
+  const threeDaysFromNow = new Date();
+  threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+  const threeDaysString = threeDaysFromNow.toISOString().split('T')[0];
+
+  const expiredItems = fridgeItems.filter(item => item.expiryDate < today);
+  const expiringSoonItems = fridgeItems.filter(item => item.expiryDate >= today && item.expiryDate <= threeDaysString);
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -87,7 +115,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {/* Tổng sản phẩm */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
@@ -95,21 +123,8 @@ const Dashboard: React.FC = () => {
               <ShoppingBagIcon className="h-6 w-6 text-blue-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Tổng sản phẩm</p>
+              <p className="text-sm font-medium text-gray-500">Tổng thực phẩm</p>
               <p className="text-2xl font-semibold text-gray-900">{stats.totalProducts}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Sản phẩm sắp hết */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="p-3 rounded-full bg-yellow-100">
-              <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Sắp hết hàng</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.lowStockProducts}</p>
             </div>
           </div>
         </div>
@@ -147,29 +162,62 @@ const Dashboard: React.FC = () => {
           <div className="p-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center">
               <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500 mr-2" />
-              Sản phẩm sắp hết
+              Thực phẩm hết hạn / sắp hết hạn
             </h3>
           </div>
           <div className="p-4">
-            {expiringSoonProducts.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">Tất cả sản phẩm đều đầy đủ</p>
-            ) : (
-              <div className="space-y-3">
-                {expiringSoonProducts.map((product) => (
-                  <div key={product.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{product.name}</h4>
-                      <p className="text-sm text-gray-500">{product.category}</p>
+            {/* Sản phẩm đã hết hạn */}
+            {expiredItems.length > 0 && (
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-red-700 mb-2">Đã hết hạn ({expiredItems.length})</h4>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {expiredItems.map(item => (
+                    <div key={item.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                      <div>
+                        <span className="font-medium text-red-900">{item.name}</span>
+                        <span className="ml-2 text-xs text-gray-500">{item.category}</span>
+                        <span className="ml-2 text-xs text-gray-400">{item.location === 'fridge' ? '🧊' : item.location === 'freezer' ? '❄️' : '🗄️'}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-red-700 font-semibold block">Hết hạn</span>
+                        <span className="text-xs text-gray-500 block">HSD: {new Date(item.expiryDate).toLocaleDateString('vi-VN')}</span>
+                        <span className="text-xs text-gray-500 block">SL: {item.stock}</span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-yellow-700">
-                        Còn {product.stock} {product.unit}
-                      </p>
-                      <p className="text-xs text-gray-500">{formatPrice(product.price)}</p>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
+            )}
+
+            {/* Sản phẩm sắp hết hạn */}
+            {expiringSoonItems.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-yellow-700 mb-2">Sắp hết hạn ({expiringSoonItems.length})</h4>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {expiringSoonItems.map(item => {
+                    const daysLeft = Math.ceil((new Date(item.expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                    return (
+                      <div key={item.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                        <div>
+                          <span className="font-medium text-yellow-900">{item.name}</span>
+                          <span className="ml-2 text-xs text-gray-500">{item.category}</span>
+                          <span className="ml-2 text-xs text-gray-400">{item.location === 'fridge' ? '🧊' : item.location === 'freezer' ? '❄️' : '🗄️'}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs text-yellow-700 font-semibold block">Còn {daysLeft} ngày</span>
+                          <span className="text-xs text-gray-500 block">HSD: {new Date(item.expiryDate).toLocaleDateString('vi-VN')}</span>
+                          <span className="text-xs text-gray-500 block">SL: {item.stock}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Nếu không có sản phẩm nào hết/sắp hết hạn */}
+            {expiredItems.length === 0 && expiringSoonItems.length === 0 && (
+              <p className="text-gray-500 text-center py-4">Tất cả sản phẩm đều còn hạn</p>
             )}
           </div>
         </div>
@@ -367,4 +415,4 @@ const Dashboard: React.FC = () => {
   );
 };
 
-export default Dashboard; 
+export default Dashboard;
