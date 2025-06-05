@@ -3,6 +3,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '../../contexts/AppContext';
+import { Group, Fridge } from '../../contexts/AppContext';
 
 interface AddGroupModalProps {
   isOpen: boolean;
@@ -50,27 +51,44 @@ const AddGroupModal: React.FC<AddGroupModalProps> = ({
 
     if (!validateForm()) return;
 
-    const groupData = {
-      id: Date.now().toString(),
+    const groupId = Date.now().toString();
+    const fridgeId = groupId; // Sử dụng groupId làm fridgeId
+
+    // Tạo group data
+    const groupData: Group = {
+      id: groupId,
       name: formData.name.trim(),
       description: formData.description.trim() || undefined,
-      image:
-        formData.image ||
+      image: formData.image || 
         `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name)}&background=10b981&color=fff`,
       ownerId: currentUserId,
       members: [currentUserId], // Owner là thành viên đầu tiên
+      fridgeId: fridgeId,
     };
 
-    
+    // Tạo fridge data tương ứng
+    const fridgeData: Fridge = {
+      id: fridgeId,
+      fridgeItems: [],
+      lastUpdated: new Date().toISOString(),
+    };
+
     try {
-      dispatch({ type: 'ADD_GROUP', payload: groupData });
+      dispatch({ 
+        type: 'ADD_GROUP', 
+        payload: { 
+          group: groupData, 
+          fridge: fridgeData 
+        } 
+      });
       onClose();
     } catch (error) {
       console.error('Lỗi khi lưu nhóm:', error);
-      setErrors({ ...errors, submit: 'Có lỗi xảy ra khi tạo nhóm. Vui lòng thử lại.' });
+      setErrors({ 
+        ...errors, 
+        submit: 'Có lỗi xảy ra khi tạo nhóm. Vui lòng thử lại.' 
+      });
     }
-
-    onClose();
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -152,6 +170,26 @@ const AddGroupModal: React.FC<AddGroupModalProps> = ({
                       className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      URL ảnh đại diện (tùy chọn)
+                    </label>
+                    <input
+                      type="url"
+                      name="image"
+                      value={formData.image}
+                      onChange={handleChange}
+                      placeholder="https://example.com/image.jpg"
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                    />
+                  </div>
+
+                  {errors.submit && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                      <p className="text-sm text-red-600">{errors.submit}</p>
+                    </div>
+                  )}
 
                   <div className="flex justify-end space-x-3 pt-4">
                     <button

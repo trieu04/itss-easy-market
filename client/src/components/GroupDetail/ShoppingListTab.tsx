@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useAppContext } from '../../contexts/AppContext';
 import {
   ListBulletIcon,
   FunnelIcon,
@@ -6,7 +7,10 @@ import {
   CheckCircleIcon,
   ClockIcon,
   ExclamationTriangleIcon,
+  PencilIcon, 
+  TrashIcon 
 } from '@heroicons/react/24/outline';
+import { AddShoppingListModal } from '../modals/AddShoppingListModal';
 
 interface ShoppingItem {
   id: string;
@@ -20,46 +24,63 @@ interface ShoppingItem {
 
 interface ShoppingList {
   id: string;
+  groupId: string;
   name: string;
   date: string;
-  items: ShoppingItem[];
+  shoppingItems: ShoppingItem[];
   completed: boolean;
 }
 
 interface ShoppingListTabProps {
   shoppingLists: ShoppingList[];
-  setShoppingLists: (lists: ShoppingList[]) => void;
   shoppingFilter: 'all' | 'completed' | 'pending';
   setShoppingFilter: (filter: 'all' | 'completed' | 'pending') => void;
   priorityFilter: 'all' | 'low' | 'medium' | 'high';
   setPriorityFilter: (filter: 'all' | 'low' | 'medium' | 'high') => void;
+  groupId: string;
+  onEditShoppingList: (list: ShoppingList) => void;
+  onDeleteShoppingList: (listId: string) => void;
 }
 
 export const ShoppingListTab: React.FC<ShoppingListTabProps> = ({
+  groupId,
   shoppingLists,
-  setShoppingLists,
   shoppingFilter,
   setShoppingFilter,
   priorityFilter,
   setPriorityFilter,
+  onEditShoppingList,
+  onDeleteShoppingList,
 }) => {
+  const { dispatch } = useAppContext();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const handleAddShoppingList = (shoppingListData: ShoppingList) => {
+    // setShoppingLists([...shoppingLists, shoppingListData]);
+    setIsAddModalOpen(false);
+  };
+
   const handleToggleShoppingItem = (listId: string, itemId: string) => {
-    setShoppingLists(
-      shoppingLists.map((list) =>
-        list.id === listId
-          ? {
-              ...list,
-              items: list.items.map((item) =>
-                item.id === itemId ? { ...item, completed: !item.completed } : item
-              ),
-            }
-          : list
-      )
+    // Thay đổi từ setShoppingLists thành dispatch
+    const updatedLists = shoppingLists.map((list) =>
+      list.id === listId
+        ? {
+            ...list,
+            shoppingItems: list.shoppingItems.map((item) =>
+              item.id === itemId ? { ...item, completed: !item.completed } : item
+            ),
+          }
+        : list
     );
+    
+    const updatedList = updatedLists.find(list => list.id === listId);
+    if (updatedList) {
+      dispatch({ type: 'UPDATE_SHOPPING_LIST', payload: updatedList });
+    }
   };
 
   const filteredShoppingItems = useMemo(() => {
-    let allItems = shoppingLists.flatMap((list) => list.items);
+    let allItems = shoppingLists.flatMap((list) => list.shoppingItems);
 
     if (shoppingFilter === 'completed') {
       allItems = allItems.filter((item) => item.completed);
@@ -103,12 +124,7 @@ export const ShoppingListTab: React.FC<ShoppingListTabProps> = ({
           Danh sách mua hàng ({shoppingLists.length})
         </h3>
         <button
-          onClick={() => {
-            const listName = prompt('Nhập tên danh sách mua hàng:');
-            if (listName) {
-              alert(`Đã tạo danh sách: ${listName}`);
-            }
-          }}
+          onClick={() => setIsAddModalOpen(true)}
           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 transition-colors"
         >
           <PlusIcon className="h-5 w-5 mr-2" />
@@ -197,7 +213,7 @@ export const ShoppingListTab: React.FC<ShoppingListTabProps> = ({
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">{list.name}</h3>
                 <p className="text-sm text-gray-500">
-                  {new Date(list.date).toLocaleDateString('vi-VN')} • {list.items.length} mặt hàng
+                  {new Date(list.date).toLocaleDateString('vi-VN')} • {list.shoppingItems.length} mặt hàng
                 </p>
               </div>
               <div
@@ -207,10 +223,27 @@ export const ShoppingListTab: React.FC<ShoppingListTabProps> = ({
               >
                 {list.completed ? 'Hoàn thành' : 'Đang thực hiện'}
               </div>
+
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => onEditShoppingList(list)}
+                  className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  title="Chỉnh sửa danh sách"
+                >
+                  <PencilIcon className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => onDeleteShoppingList(list.id)}
+                  className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Xóa danh sách"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {list.items
+              {list.shoppingItems
                 .filter((item) => {
                   if (shoppingFilter === 'completed') return item.completed;
                   if (shoppingFilter === 'pending') return !item.completed;
@@ -271,6 +304,12 @@ export const ShoppingListTab: React.FC<ShoppingListTabProps> = ({
           <p className="mt-1 text-sm text-gray-500">Thử thay đổi bộ lọc để xem các mặt hàng khác.</p>
         </div>
       )}
+
+      <AddShoppingListModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        groupId={groupId} 
+      />
     </div>
   );
 };

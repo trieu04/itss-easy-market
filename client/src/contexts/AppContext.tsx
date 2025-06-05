@@ -30,6 +30,7 @@ export interface Group {
   image: string;
   ownerId: string; // user_id
   members: string[]; // user_id
+  fridgeId: string; //  tủ lạnh của group
 }
 
 export interface FridgeItem {
@@ -40,6 +41,12 @@ export interface FridgeItem {
   expirationTime: string; // ISO date string
   storeLocation: string;
   image?: string; // Optional image URL
+}
+
+export interface Fridge {
+  id: string;
+  fridgeItems: FridgeItem[];
+  lastUpdated: string; // ISO date string
 }
 
 export interface ShoppingItem {
@@ -54,9 +61,10 @@ export interface ShoppingItem {
 
 export interface ShoppingList {
   id: string;
+  groupId: string; // ShoppingList của group....
   name: string;
   date: string;
-  items: ShoppingItem[];
+  shoppingItems: ShoppingItem[];
   completed: boolean;
 }
 
@@ -92,9 +100,10 @@ export interface ExpenseRecord {
 
 interface AppState {
   products: Product[];
-  fridgeItem: FridgeItem[];
-  shoppingItem: ShoppingItem[];
+  fridgeItems: FridgeItem[];
+  shoppingItems: ShoppingItem[];
   shoppingLists: ShoppingList[];
+  fridges: Fridge[];
   groups: Group[];
   users: User[];
   recipes: Recipe[];
@@ -133,16 +142,19 @@ type AppAction =
   | { type: 'CLEAR_CART' }
   | { type: 'TOGGLE_FAVORITE'; payload: string }
   | { type: 'LOAD_DATA'; payload: Partial<AppState> }
-  | { type: 'ADD_GROUP'; payload: Group } 
-  | { type: 'DELETE_GROUP'; payload: {id: string; currentUserId: string }} 
+  | { type: 'ADD_GROUP'; payload: { group: Group; fridge: Fridge } }
+  | { type: 'DELETE_GROUP'; payload: { id: string; currentUserId: string } }
   | { type: 'ADD_MEMBER_GROUP'; payload: { groupId: string; email: string; currentUserId: string } }
-  | { type: 'DELETE_MEMBER_GROUP'; payload: { groupId: string; email: string, currentUserId: string } };
+  | { type: 'DELETE_MEMBER_GROUP'; payload: { groupId: string; email: string; currentUserId: string } }
+  | { type: 'ADD_FRIDGE_ITEM'; payload: { fridgeId: string; item: FridgeItem } }
+  | { type: 'DELETE_FRIDGE_ITEM'; payload: { fridgeId: string; itemId: string } };
 
 const initialState: AppState = {
   products: [],
   shoppingLists: [],
-  fridgeItem: [],
-  shoppingItem: [],
+  fridgeItems: [],
+  fridges: [],
+  shoppingItems: [],
   groups: [],
   users: [],
   recipes: [],
@@ -201,9 +213,20 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         shoppingLists: state.shoppingLists.map(list =>
           list.id === action.payload.listId
-            ? { ...list, items: [...list.items, action.payload.item] }
+            ? { ...list, items: [...list.shoppingItems, action.payload.item] }
             : list
         ),
+      };
+
+    case 'ADD_SHOPPING_ITEM':
+      return {
+        ...state,
+        shoppingLists: state.shoppingLists.map(list =>
+          list.id === action.payload.listId
+            ? { ...list, items: [...list.shoppingItems, action.payload.item] }
+            : list
+        ),
+        shoppingItems: [...state.shoppingItems, action.payload.item], // Cập nhật shoppingItems
       };
 
     case 'UPDATE_SHOPPING_ITEM':
@@ -213,7 +236,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
           list.id === action.payload.listId
             ? {
               ...list,
-              items: list.items.map(item =>
+              items: list.shoppingItems.map(item =>
                 item.id === action.payload.item.id ? action.payload.item : item
               ),
             }
@@ -228,7 +251,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
           list.id === action.payload.listId
             ? {
               ...list,
-              items: list.items.filter(item => item.id !== action.payload.itemId),
+              items: list.shoppingItems.filter(item => item.id !== action.payload.itemId),
             }
             : list
         ),
@@ -328,35 +351,47 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
 
     case 'ADD_GROUP':
-      return { ...state, groups: [...state.groups, action.payload] };
+     return {
+       ...state,
+       groups: [...state.groups, {
+         ...action.payload.group,
+         members: action.payload.group.members || [action.payload.group.ownerId]
+       }],
+       fridges: [...state.fridges, action.payload.fridge],
+     };
 
-    case 'DELETE_GROUP':
+    case 'DELETE_GROUP': {
+      const group = state.groups.find(g => g.id === action.payload.id);
+      if (!group) {
+        return { ...state, error: 'Nhóm không tồn tại' };
+      }
+      if (group.ownerId !== action.payload.currentUserId) {
+        return { ...state, error: 'Chỉ owner mới có quyền xóa nhóm' };
+      }
       return {
         ...state,
-        groups: state.groups.filter(group => group.id !== action.payload.id),
+        groups: state.groups.filter(g => g.id !== action.payload.id),
+        fridges: state.fridges.filter(f => f.id !== group.fridgeId),
+        fridgeItems: state.fridgeItems.filter(item => !state.fridges.find(f => f.id === group.fridgeId)?.fridgeItems.includes(item)),
       };
+    }
 
     case 'ADD_MEMBER_GROUP': {
       const { groupId, email, currentUserId } = action.payload;
-
       const targetGroup = state.groups.find(group => group.id === groupId);
       if (!targetGroup) {
         return { ...state, error: 'Nhóm không tồn tại' };
       }
-
       if (targetGroup.ownerId !== currentUserId) {
         return { ...state, error: 'Chỉ owner mới có quyền thêm thành viên' };
       }
-
       const targetUser = state.users.find(user => user.email === email);
       if (!targetUser) {
         return { ...state, error: 'Không tìm thấy người dùng với email này' };
       }
-
       if (targetGroup.members.includes(targetUser.id)) {
         return { ...state, error: 'Người dùng đã là thành viên của nhóm' };
       }
-
       return {
         ...state,
         groups: state.groups.map(group =>
@@ -367,9 +402,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
         error: null,
       };
     }
-      
 
-    case 'DELETE_MEMBER_GROUP':{
+    case 'DELETE_MEMBER_GROUP': {
       const { groupId, email, currentUserId } = action.payload;
       const targetGroup = state.groups.find(group => group.id === groupId);
       if (!targetGroup) {
@@ -386,16 +420,36 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         groups: state.groups.map(group =>
           group.id === groupId
-            ? {
-                ...group,
-                members: group.members.filter(id => id !== targetUser.id),
-              }
+            ? { ...group, members: group.members.filter(id => id !== targetUser.id) }
             : group
         ),
         error: null,
       };
     }
+
+    case 'ADD_FRIDGE_ITEM':
+      return {
+        ...state,
+        fridges: state.fridges.map(fridge =>
+          fridge.id === action.payload.fridgeId
+            ? { ...fridge, items: [...fridge.fridgeItems, action.payload.item] }
+            : fridge
+        ),
+        fridgeItems: [...state.fridgeItems, action.payload.item],
+      };
+
+    case 'DELETE_FRIDGE_ITEM':
+      return {
+        ...state,
+        fridges: state.fridges.map(fridge =>
+          fridge.id === action.payload.fridgeId
+            ? { ...fridge, items: fridge.fridgeItems.filter(item => item.id !== action.payload.itemId) }
+            : fridge
+        ),
+        fridgeItems: state.fridgeItems.filter(item => item.id !== action.payload.itemId),
+      };
       
+    
 
     case 'LOAD_DATA':
       return { ...state, ...action.payload };
@@ -535,8 +589,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [
     state.products,
     state.shoppingLists,
-    state.fridgeItem,
-    state.shoppingItem,
+    state.fridgeItems,
+    state.shoppingItems,
     state.recipes,
     state.mealPlans,
     state.expenses,

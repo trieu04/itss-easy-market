@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
-import { ArrowLeftIcon, CubeIcon, ListBulletIcon, UserGroupIcon, CalendarIcon } from '@heroicons/react/24/outline'; // Thêm CalendarIcon
+import { ArrowLeftIcon, CubeIcon, ListBulletIcon, UserGroupIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { FridgeTab } from '../components/GroupDetail/FridgeTab';
 import { ShoppingListTab } from '../components/GroupDetail/ShoppingListTab';
 import { MembersTab } from '../components/GroupDetail/MembersTab';
-// import { MealPlannerTab } from '../components/GroupDetail/MealPlannerTab'; // Thêm MealPlannerTab
+import { EditShoppingListModal } from '../components/modals/EditShoppingListModal';
 import { EditFridgeItemModal } from '../components/modals/EditFridgeItemModal';
 
 // Interfaces
@@ -17,6 +17,12 @@ interface FridgeItem {
   expirationTime: string; // ISO date string
   storeLocation: string;
   image?: string; // Optional image URL
+}
+
+interface Fridge {
+  id: string;
+  fridgeItems: FridgeItem[];
+  latestUpdate: string; // ISO date string
 }
 
 interface ShoppingItem {
@@ -33,7 +39,8 @@ interface ShoppingList {
   id: string;
   name: string;
   date: string;
-  items: ShoppingItem[];
+  groupId: string;
+  shoppingItems: ShoppingItem[];
   completed: boolean;
 }
 
@@ -48,6 +55,8 @@ interface Group {
   name: string;
   ownerId: string;
   members?: string[];
+  fridgeId: string;
+  description?: string;
 }
 
 const GroupDetail: React.FC = () => {
@@ -56,7 +65,7 @@ const GroupDetail: React.FC = () => {
   const navigate = useNavigate();
 
   // Quản lý tab hiện tại
-  const [activeTab, setActiveTab] = useState<'fridge' | 'shoppingList' | 'members' | 'mealPlanner'>('fridge'); // Thêm mealPlanner
+  const [activeTab, setActiveTab] = useState<'fridge' | 'shoppingList' | 'members' | 'mealPlanner'>('fridge');
   const [isLoading, setIsLoading] = useState(true);
 
   // Filter states cho tủ lạnh
@@ -67,20 +76,16 @@ const GroupDetail: React.FC = () => {
   const [shoppingFilter, setShoppingFilter] = useState<'all' | 'completed' | 'pending'>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all');
 
+  const [editingShoppingList, setEditingShoppingList] = useState<ShoppingList | null>(null);
+  const [isEditShoppingListModalOpen, setIsEditShoppingListModalOpen] = useState(false);
+
+
   // State quản lý modal sửa fridge item
   const [editingFridgeItem, setEditingFridgeItem] = useState<FridgeItem | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  // Tìm nhóm theo groupId
-  const group = state.groups.find((g) => g.id === groupId);
-
-  // Mock data
-  const mockUsers: User[] = [
-    { id: 'user1', name: 'Nguyen Van A', email: 'a@example.com' },
-    { id: 'user2', name: 'Tran Thi B', email: 'b@example.com' },
-  ];
-
-  const mockFridgeItems: FridgeItem[] = [
+  // State quản lý fridge items
+  const [fridgeItems, setFridgeItems] = useState<FridgeItem[]>([
     {
       id: 'fridge1',
       name: 'Thịt gà',
@@ -135,6 +140,15 @@ const GroupDetail: React.FC = () => {
       expirationTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
       image: 'https://via.placeholder.com/150',
     },
+  ]);
+
+  // Tìm nhóm theo groupId
+  const group = state.groups.find((g) => g.id === groupId);
+
+  // Mock data
+  const mockUsers: User[] = [
+    { id: 'user1', name: 'Nguyen Van A', email: 'a@example.com' },
+    { id: 'user2', name: 'Tran Thi B', email: 'b@example.com' },
   ];
 
   const mockShoppingLists: ShoppingList[] = [
@@ -143,7 +157,8 @@ const GroupDetail: React.FC = () => {
       name: 'Mua sắm tuần này',
       date: new Date().toISOString(),
       completed: false,
-      items: [
+      groupId: '1',
+      shoppingItems: [
         {
           id: 'item1',
           name: 'Táo',
@@ -187,7 +202,8 @@ const GroupDetail: React.FC = () => {
       name: 'Mua sắm cuối tuần',
       date: new Date(Date.now() - 86400000).toISOString(),
       completed: true,
-      items: [
+      groupId: '1',
+      shoppingItems: [
         {
           id: 'item5',
           name: 'Cà chua',
@@ -202,7 +218,7 @@ const GroupDetail: React.FC = () => {
   ];
 
   // State quản lý shopping lists
-  const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>(mockShoppingLists);
+  const shoppingLists = state.shoppingLists.filter(list => list.groupId === groupId);
 
   const currentUserId = group?.ownerId;
 
@@ -246,7 +262,7 @@ const GroupDetail: React.FC = () => {
 
   // Filtered fridge items
   const filteredFridgeItems = useMemo(() => {
-    let filtered = mockFridgeItems;
+    let filtered = fridgeItems;
 
     if (fridgeFilter === 'frozen' || fridgeFilter === 'fresh') {
       filtered = filtered.filter((item) => item.storeLocation === fridgeFilter);
@@ -263,25 +279,21 @@ const GroupDetail: React.FC = () => {
     }
 
     return filtered;
-  }, [fridgeFilter, fridgeSearch]);
+  }, [fridgeItems, fridgeFilter, fridgeSearch]);
 
   // Thành viên nhóm
   const members = useMemo(() => {
-    if (!group) return [];
-
-    const memberList =
-      group.members
-        ?.map((memberId) => mockUsers.find((user) => user.id === memberId))
-        .filter((user): user is User => user !== undefined) || [];
-
-    const owner = mockUsers.find((user) => user.id === group.ownerId);
-
-    if (owner && !memberList.some((member) => member.id === owner.id)) {
-      memberList.unshift(owner);
-    }
-
-    return memberList;
-  }, [group]);
+     if (!group) return [];
+     const memberList =
+       group.members
+         ?.map((memberId) => state.users.find((user) => user.id === memberId))
+         .filter((user): user is User => user !== undefined) || [];
+     const owner = state.users.find((user) => user.id === group.ownerId);
+     if (owner && !memberList.some((member) => member.id === owner.id)) {
+       memberList.unshift(owner);
+     }
+     return memberList;
+   }, [group, state.users]);
 
   useEffect(() => {
     if (!group) {
@@ -322,8 +334,13 @@ const GroupDetail: React.FC = () => {
     }
   };
 
-  const handleAddFridgeItem = () => {
-    alert('Thêm món hàng vào tủ lạnh');
+  // Cập nhật handleAddFridgeItem để thêm item vào state
+  const handleAddFridgeItem = (newItem: Omit<FridgeItem, 'id'>) => {
+    const item: FridgeItem = {
+      ...newItem,
+      id: `fridge_${Date.now()}`, // Tạo ID đơn giản
+    };
+    setFridgeItems(prevItems => [...prevItems, item]);
   };
 
   const handleEditFridgeItem = (item: FridgeItem) => {
@@ -332,15 +349,45 @@ const GroupDetail: React.FC = () => {
   };
 
   const handleDeleteFridgeItem = (itemId: string) => {
+    // eslint-disable-next-line no-restricted-globals
     if (confirm('Bạn có chắc chắn muốn xóa món đồ này?')) {
-      alert(`Đã xóa item có ID: ${itemId}`);
+      setFridgeItems(prevItems => prevItems.filter(item => item.id !== itemId));
     }
   };
 
   const handleSaveFridgeItem = (updatedItem: FridgeItem) => {
-    alert(`Đã cập nhật: ${updatedItem.name}`);
+    setFridgeItems(prevItems => 
+      prevItems.map(item => 
+        item.id === updatedItem.id ? updatedItem : item
+      )
+    );
     setIsEditModalOpen(false);
     setEditingFridgeItem(null);
+  };
+
+  const handleEditShoppingList = (list: ShoppingList) => {
+  setEditingShoppingList(list);
+  setIsEditShoppingListModalOpen(true);
+  };
+
+  // Handler pour delete shopping list
+  const handleDeleteShoppingList = (listId: string) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa danh sách này?')) {
+      dispatch({ 
+        type: 'DELETE_SHOPPING_LIST', 
+        payload: listId 
+      });
+    }
+  };
+
+  // Handler pour save edited shopping list
+  const handleSaveShoppingList = (updatedList: ShoppingList) => {
+    dispatch({ 
+      type: 'UPDATE_SHOPPING_LIST', 
+      payload: updatedList 
+    });
+    setIsEditShoppingListModalOpen(false);
+    setEditingShoppingList(null);
   };
 
   return (
@@ -395,7 +442,7 @@ const GroupDetail: React.FC = () => {
               <UserGroupIcon className="h-5 w-5" />
               <span>Thành viên</span>
             </button>
-            <button
+            {/* <button
               onClick={() => setActiveTab('mealPlanner')}
               className={`py-4 px-2 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${
                 activeTab === 'mealPlanner'
@@ -405,7 +452,7 @@ const GroupDetail: React.FC = () => {
             >
               <CalendarIcon className="h-5 w-5" />
               <span>Kế hoạch bữa ăn</span>
-            </button>
+            </button> */}
           </nav>
         </div>
 
@@ -413,6 +460,7 @@ const GroupDetail: React.FC = () => {
         <div className="p-6">
           {activeTab === 'fridge' && (
             <FridgeTab
+
               filteredFridgeItems={filteredFridgeItems}
               fridgeFilter={fridgeFilter}
               setFridgeFilter={setFridgeFilter}
@@ -428,12 +476,15 @@ const GroupDetail: React.FC = () => {
 
           {activeTab === 'shoppingList' && (
             <ShoppingListTab
+              groupId ={groupId!}
               shoppingLists={shoppingLists}
-              setShoppingLists={setShoppingLists}
+              // setShoppingLists={setShoppingLists}
               shoppingFilter={shoppingFilter}
               setShoppingFilter={setShoppingFilter}
               priorityFilter={priorityFilter}
               setPriorityFilter={setPriorityFilter}
+              onEditShoppingList={handleEditShoppingList}
+              onDeleteShoppingList={handleDeleteShoppingList}
             />
           )}
 
@@ -446,14 +497,6 @@ const GroupDetail: React.FC = () => {
               handleDeleteMember={handleDeleteMember}
             />
           )}
-
-          {/* {activeTab === 'mealPlanner' && (
-            <MealPlannerTab
-              mealPlans={state.mealPlans}
-              recipes={state.recipes}
-              dispatch={dispatch}
-            />
-          )} */}
         </div>
       </div>
 
@@ -466,6 +509,20 @@ const GroupDetail: React.FC = () => {
           }}
           item={editingFridgeItem}
           onSave={handleSaveFridgeItem}
+        />
+      )}
+
+
+      {isEditShoppingListModalOpen && editingShoppingList && (
+        <EditShoppingListModal
+          isOpen={isEditShoppingListModalOpen}
+          onClose={() => {
+            setIsEditShoppingListModalOpen(false);
+            setEditingShoppingList(null);
+          }}
+          shoppingList={editingShoppingList}
+          onSave={handleSaveShoppingList}
+          groupId={groupId!}
         />
       )}
     </div>

@@ -11,8 +11,13 @@ import { useAppContext } from '../contexts/AppContext';
 
 const Dashboard: React.FC = () => {
   const { state } = useAppContext();
-  const { products, shoppingLists, expenses, mealPlans, recipes } = state;
-
+  const { 
+  products = [], 
+  shoppingLists = [], 
+  expenses = [], 
+  mealPlans = [], 
+  recipes = [] 
+} = state || {};
   // Thống kê tổng quan
   const stats = useMemo(() => {
     const totalProducts = products.length;
@@ -67,7 +72,8 @@ const Dashboard: React.FC = () => {
 
   // Danh sách mua sắm đang hoạt động
   const activeShoppingListsData = useMemo(() => {
-    return shoppingLists.filter(list => !list.completed).slice(0, 3);
+    const safeShoppingLists = shoppingLists || [];
+    return safeShoppingLists.filter(list => !list.completed).slice(0, 3);
   }, [shoppingLists]);
 
   const formatPrice = (price: number) => {
@@ -188,8 +194,9 @@ const Dashboard: React.FC = () => {
             ) : (
               <div className="space-y-3">
                 {activeShoppingListsData.map((list) => {
-                  const completedItems = list.items.filter(item => item.completed).length;
-                  const totalItems = list.items.length;
+                  const safeShoppingItems = list.shoppingItems || [];
+                  const completedItems = safeShoppingItems.filter(item => item.completed).length;
+                  const totalItems = safeShoppingItems.length;
                   const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
                   
                   return (

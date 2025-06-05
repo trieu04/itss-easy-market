@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   CubeIcon,
   FunnelIcon,
@@ -8,6 +8,7 @@ import {
   PlusIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
+import { AddFridgeItemModal } from '../modals/AddFridgeItemModal';
 
 interface FridgeItem {
   id: string;
@@ -25,7 +26,7 @@ interface FridgeTabProps {
   setFridgeFilter: (filter: 'all' | 'frozen' | 'fresh' | 'expired' | 'expiring') => void;
   fridgeSearch: string;
   setFridgeSearch: (search: string) => void;
-  handleAddFridgeItem: () => void;
+  handleAddFridgeItem: (item: Omit<FridgeItem, 'id'>) => void;
   handleEditFridgeItem: (item: FridgeItem) => void;
   handleDeleteFridgeItem: (itemId: string) => void;
   getExpirationBadgeColor: (expirationTime: string) => string;
@@ -44,6 +45,21 @@ export const FridgeTab: React.FC<FridgeTabProps> = ({
   getExpirationBadgeColor,
   getExpirationText,
 }) => {
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const handleOpenAddModal = () => {
+    setIsAddModalOpen(true);
+  };
+
+  const handleCloseAddModal = () => {
+    setIsAddModalOpen(false);
+  };
+
+  const handleSaveNewItem = (item: Omit<FridgeItem, 'id'>) => {
+    handleAddFridgeItem(item);
+    setIsAddModalOpen(false);
+  };
+
   return (
     <div>
       {/* Filters cho tủ lạnh */}
@@ -112,12 +128,12 @@ export const FridgeTab: React.FC<FridgeTabProps> = ({
       {/* Fridge Items Grid with Add Button */}
       <div className="p-4">
         <button
-        type="button"
-        onClick={handleAddFridgeItem}
-        className="inline-flex items-center px-4 py-2 mb-8 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 transition-colors"
+          type="button"
+          onClick={handleOpenAddModal}
+          className="inline-flex items-center px-4 py-2 mb-8 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 transition-colors"
         >
-        <PlusIcon className="h-4 w-4 mr-1" />
-        Thêm thực phẩm
+          <PlusIcon className="h-4 w-4 mr-1" />
+          Thêm thực phẩm
         </button>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -143,7 +159,11 @@ export const FridgeTab: React.FC<FridgeTabProps> = ({
               </div>
 
               <div className="relative mt-12">
-                <img src={item.image || 'https://via.placeholder.com/150'} alt={item.name} className="w-full h-32 object-cover rounded-lg mb-3" />
+                <img
+                  src="https://placehold.co/150x"
+                  alt="Fridge Item"
+                  className="w-16 h-16 object-cover rounded-lg"
+                />
                 <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-medium ${
                   item.storeLocation === 'frozen' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
                 }`}>
@@ -179,6 +199,13 @@ export const FridgeTab: React.FC<FridgeTabProps> = ({
           <p className="mt-1 text-sm text-gray-500">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.</p>
         </div>
       )}
+
+      {/* Add Fridge Item Modal */}
+      <AddFridgeItemModal
+        isOpen={isAddModalOpen}
+        onClose={handleCloseAddModal}
+        onSave={handleSaveNewItem}
+      />
     </div>
   );
 };

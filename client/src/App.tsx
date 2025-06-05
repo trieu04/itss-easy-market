@@ -12,7 +12,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
 import Dashboard from './pages/Dashboard';
-import ShoppingList from './pages/ShoppingList';
+// import ShoppingList from './pages/ShoppingList';
 import FoodStore from './pages/FoodStore';
 import Recipes from './pages/Recipes';
 import MealPlanner from './pages/MealPlanner';
@@ -106,13 +106,13 @@ const AppContent: React.FC = () => {
             </Layout>
           </ProtectedRoute>
         } />
-        <Route path="/shopping-list" element={
+        {/* <Route path="/shopping-list" element={
           <ProtectedRoute>
             <Layout>
               <ShoppingList />
             </Layout>
           </ProtectedRoute>
-        } />
+        } /> */}
         <Route path="/recipes" element={
           <ProtectedRoute>
             <Layout>

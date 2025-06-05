@@ -233,7 +233,8 @@ export const mockShoppingLists: ShoppingList[] = [
     name: 'Danh sách mua sắm tuần này',
     date: '2024-01-15',
     completed: false,
-    items: [
+    groupId: '1',
+    shoppingItems: [
       {
         id: '1',
         name: 'Gạo thơm',
@@ -277,7 +278,8 @@ export const mockShoppingLists: ShoppingList[] = [
     name: 'Chuẩn bị tiệc cuối tuần',
     date: '2024-01-20',
     completed: true,
-    items: [
+    groupId: '1',
+    shoppingItems: [
       {
         id: '5',
         name: 'Thịt bò',
