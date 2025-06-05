@@ -30,6 +30,15 @@ const Sidebar: React.FC = () => {
       label: 'Danh Sách Mua Sắm'
     },
     {
+      path: '/groups',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25a2.25 2.25 0 1 1 4.5 0 2.25 2.25 0 0 1-4.5 0Zm7.5 2.25a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5ZM2.25 19.5a6.75 6.75 0 0 1 13.5 0m3-7.5a2.25 2.25 0 1 1 4.5 0 2.25 2.25 0 0 1-4.5 0Zm2.25 7.5a6.75 6.75 0 0 0-5.25-6.57m5.25 6.57a6.75 6.75 0 0 0-5.25-6.57m0 0a6.75 6.75 0 0 0-5.25 6.57" />
+        </svg>
+      ),
+      label: 'Nhóm của bạn'
+    },
+    {
       path: '/food-store',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">

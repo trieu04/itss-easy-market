@@ -20,6 +20,7 @@ import { FavoriteRecipeEntity } from "../entities/favorite-recipe.entity";
 import { FoodCategoryEntity } from "../entities/food-category.entity";
 import { FoodItemEntity } from "../entities/food-items.entity";
 import { GroupEntity } from "../entities/group.entity";
+import { FridgeEntity } from "../entities/fridge.entity";
 import { MealEntity } from "../entities/meal.entity";
 import { RecipeEntity } from "../entities/recipe.entity";
 import { ReportDataEntity } from "../entities/report-data.entity";
@@ -43,6 +44,7 @@ import { FoodCategoryModule } from "../modules/food-category/food-category.modul
       FoodCategoryEntity,
       FoodItemEntity,
       GroupEntity,
+      FridgeEntity,
       MealEntity,
       RecipeEntity,
       ReportDataEntity,

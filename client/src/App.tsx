@@ -22,6 +22,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
+import Groups from './pages/Groups';
+import GroupDetail from './pages/GroupDetail';
 
 const AppContent: React.FC = () => {
   const { loading, error } = useInitialData();
@@ -80,6 +82,20 @@ const AppContent: React.FC = () => {
           <ProtectedRoute>
             <Layout>
               <FridgeManager />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/groups" element={
+          <ProtectedRoute>
+            <Layout>
+              <Groups />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/groups/:groupId" element={
+          <ProtectedRoute>
+            <Layout>
+              <GroupDetail />
             </Layout>
           </ProtectedRoute>
         } />

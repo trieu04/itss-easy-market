@@ -16,6 +16,32 @@ export interface Product {
   stock: number;
 }
 
+
+export interface User {
+  id: string; 
+  name: string; 
+  email: string;
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  description?: string;
+  image: string;
+  ownerId: string; // user_id
+  members: string[]; // user_id
+}
+
+export interface FridgeItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  expirationTime: string; // ISO date string
+  storeLocation: string;
+  image?: string; // Optional image URL
+}
+
 export interface ShoppingItem {
   id: string;
   name: string;
@@ -66,7 +92,11 @@ export interface ExpenseRecord {
 
 interface AppState {
   products: Product[];
+  fridgeItem: FridgeItem[];
+  shoppingItem: ShoppingItem[];
   shoppingLists: ShoppingList[];
+  groups: Group[];
+  users: User[];
   recipes: Recipe[];
   mealPlans: MealPlan[];
   expenses: ExpenseRecord[];
@@ -102,11 +132,19 @@ type AppAction =
   | { type: 'UPDATE_CART_QUANTITY'; payload: { productId: string; quantity: number } }
   | { type: 'CLEAR_CART' }
   | { type: 'TOGGLE_FAVORITE'; payload: string }
-  | { type: 'LOAD_DATA'; payload: Partial<AppState> };
+  | { type: 'LOAD_DATA'; payload: Partial<AppState> }
+  | { type: 'ADD_GROUP'; payload: Group } 
+  | { type: 'DELETE_GROUP'; payload: {id: string; currentUserId: string }} 
+  | { type: 'ADD_MEMBER_GROUP'; payload: { groupId: string; email: string; currentUserId: string } }
+  | { type: 'DELETE_MEMBER_GROUP'; payload: { groupId: string; email: string, currentUserId: string } };
 
 const initialState: AppState = {
   products: [],
   shoppingLists: [],
+  fridgeItem: [],
+  shoppingItem: [],
+  groups: [],
+  users: [],
   recipes: [],
   mealPlans: [],
   expenses: [],
@@ -289,8 +327,80 @@ function appReducer(state: AppState, action: AppAction): AppState {
           : [...state.favorites, action.payload],
       };
 
+    case 'ADD_GROUP':
+      return { ...state, groups: [...state.groups, action.payload] };
+
+    case 'DELETE_GROUP':
+      return {
+        ...state,
+        groups: state.groups.filter(group => group.id !== action.payload.id),
+      };
+
+    case 'ADD_MEMBER_GROUP': {
+      const { groupId, email, currentUserId } = action.payload;
+
+      const targetGroup = state.groups.find(group => group.id === groupId);
+      if (!targetGroup) {
+        return { ...state, error: 'Nhóm không tồn tại' };
+      }
+
+      if (targetGroup.ownerId !== currentUserId) {
+        return { ...state, error: 'Chỉ owner mới có quyền thêm thành viên' };
+      }
+
+      const targetUser = state.users.find(user => user.email === email);
+      if (!targetUser) {
+        return { ...state, error: 'Không tìm thấy người dùng với email này' };
+      }
+
+      if (targetGroup.members.includes(targetUser.id)) {
+        return { ...state, error: 'Người dùng đã là thành viên của nhóm' };
+      }
+
+      return {
+        ...state,
+        groups: state.groups.map(group =>
+          group.id === groupId
+            ? { ...group, members: [...group.members, targetUser.id] }
+            : group
+        ),
+        error: null,
+      };
+    }
+      
+
+    case 'DELETE_MEMBER_GROUP':{
+      const { groupId, email, currentUserId } = action.payload;
+      const targetGroup = state.groups.find(group => group.id === groupId);
+      if (!targetGroup) {
+        return { ...state, error: 'Nhóm không tồn tại' };
+      }
+      if (targetGroup.ownerId !== currentUserId) {
+        return { ...state, error: 'Chỉ owner mới có quyền xóa thành viên' };
+      }
+      const targetUser = state.users.find(user => user.email === email);
+      if (!targetUser) {
+        return { ...state, error: 'Không tìm thấy người dùng với email này' };
+      }
+      return {
+        ...state,
+        groups: state.groups.map(group =>
+          group.id === groupId
+            ? {
+                ...group,
+                members: group.members.filter(id => id !== targetUser.id),
+              }
+            : group
+        ),
+        error: null,
+      };
+    }
+      
+
     case 'LOAD_DATA':
       return { ...state, ...action.payload };
+
+    
 
     default:
       return state;
@@ -397,6 +507,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       expenses: state.expenses,
       cart: state.cart,
       favorites: state.favorites,
+      groups: state.groups,
+      users: state.users,
     };
 
     try {
@@ -423,12 +535,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [
     state.products,
     state.shoppingLists,
+    state.fridgeItem,
+    state.shoppingItem,
     state.recipes,
     state.mealPlans,
     state.expenses,
     state.cart,
     state.favorites,
     state.error,
+    state.groups,
+    state.users,
     dispatch
   ]);
 
