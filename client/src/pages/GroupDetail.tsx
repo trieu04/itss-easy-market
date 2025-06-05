@@ -5,7 +5,7 @@ import { ArrowLeftIcon, CubeIcon, ListBulletIcon, UserGroupIcon, CalendarIcon } 
 import { FridgeTab } from '../components/GroupDetail/FridgeTab';
 import { ShoppingListTab } from '../components/GroupDetail/ShoppingListTab';
 import { MembersTab } from '../components/GroupDetail/MembersTab';
-import { MealPlannerTab } from '../components/GroupDetail/MealPlannerTab'; // Thêm MealPlannerTab
+// import { MealPlannerTab } from '../components/GroupDetail/MealPlannerTab'; // Thêm MealPlannerTab
 import { EditFridgeItemModal } from '../components/modals/EditFridgeItemModal';
 
 // Interfaces
@@ -447,13 +447,13 @@ const GroupDetail: React.FC = () => {
             />
           )}
 
-          {activeTab === 'mealPlanner' && (
+          {/* {activeTab === 'mealPlanner' && (
             <MealPlannerTab
               mealPlans={state.mealPlans}
               recipes={state.recipes}
               dispatch={dispatch}
             />
-          )}
+          )} */}
         </div>
       </div>
 
