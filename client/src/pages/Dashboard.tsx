@@ -105,6 +105,21 @@ const Dashboard: React.FC = () => {
   const expiredItems = fridgeItems.filter(item => item.expiryDate < today);
   const expiringSoonItems = fridgeItems.filter(item => item.expiryDate >= today && item.expiryDate <= threeDaysString);
 
+  // Lấy danh sách thực phẩm còn hạn sử dụng
+  const availableNames = fridgeItems
+    .filter(item => item.expiryDate >= today)
+    .map(item => item.name.toLowerCase());
+
+  // Recommend recipes: chỉ cần có nguyên liệu trùng với thực phẩm còn hạn sử dụng
+  const recommendedRecipes = useMemo(() => {
+    if (availableNames.length === 0) return [];
+    return recipes.filter(recipe =>
+      recipe.ingredients.some(ing =>
+        availableNames.some(name => ing.name.toLowerCase().includes(name))
+      )
+    ).slice(0, 3); // Gợi ý tối đa 3 món
+  }, [fridgeItems, recipes, today]);
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -113,6 +128,50 @@ const Dashboard: React.FC = () => {
           Cập nhật lúc {new Date().toLocaleString('vi-VN')}
         </div>
       </div>
+
+      {/* Banner gợi ý món ăn từ tủ lạnh */}
+      {recommendedRecipes.length > 0 && (
+        <div className="mb-6 bg-white rounded-lg shadow">
+          <div className="p-4 border-b border-gray-200 flex items-center">
+            <FireIcon className="h-5 w-5 text-orange-500 mr-2" />
+            <h3 className="text-lg font-semibold text-gray-900">Gợi ý món ăn từ tủ lạnh</h3>
+          </div>
+          <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {recommendedRecipes.map(recipe => {
+              // Lấy danh sách thực phẩm còn hạn sử dụng
+              const availableNames = fridgeItems
+                .filter(item => item.expiryDate >= today)
+                .map(item => item.name.toLowerCase());
+              // Tìm nguyên liệu còn thiếu
+              const missingIngredients = recipe.ingredients.filter(
+                ing => !availableNames.some(name => ing.name.toLowerCase().includes(name))
+              );
+              return (
+                <div key={recipe.id} className="border border-gray-200 rounded-lg p-4 hover:border-orange-300 hover:bg-orange-50 transition-colors">
+                  <h4 className="font-medium text-gray-900 mb-1">{recipe.name}</h4>
+                  <p className="text-xs text-gray-500 mb-2">{recipe.description}</p>
+                  <div className="flex flex-wrap gap-1 text-xs mb-2">
+                    {recipe.ingredients.slice(0, 4).map((ing, idx) => (
+                      <span key={idx} className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded">{ing.name}</span>
+                    ))}
+                    {recipe.ingredients.length > 4 && <span className="text-gray-400">...</span>}
+                  </div>
+                  {missingIngredients.length > 0 && (
+                    <div className="mt-2 text-xs text-red-600">
+                      Thiếu:{" "}
+                      {missingIngredients.map((ing, idx) => (
+                        <span key={idx} className="font-medium">
+                          {ing.name}{idx < missingIngredients.length - 1 ? ', ' : ''}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
