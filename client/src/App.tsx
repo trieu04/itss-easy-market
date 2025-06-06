@@ -12,7 +12,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
 import Dashboard from './pages/Dashboard';
-import ShoppingList from './pages/ShoppingList';
+// import ShoppingList from './pages/ShoppingList';
 import FoodStore from './pages/FoodStore';
 import Recipes from './pages/Recipes';
 import MealPlanner from './pages/MealPlanner';
@@ -22,6 +22,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
+import Groups from './pages/Groups';
+import GroupDetail from './pages/GroupDetail';
 
 const AppContent: React.FC = () => {
   const { loading, error } = useInitialData();
@@ -83,6 +85,20 @@ const AppContent: React.FC = () => {
             </Layout>
           </ProtectedRoute>
         } />
+        <Route path="/groups" element={
+          <ProtectedRoute>
+            <Layout>
+              <Groups />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/groups/:groupId" element={
+          <ProtectedRoute>
+            <Layout>
+              <GroupDetail />
+            </Layout>
+          </ProtectedRoute>
+        } />
         <Route path="/food-store" element={
           <ProtectedRoute>
             <Layout>
@@ -90,13 +106,13 @@ const AppContent: React.FC = () => {
             </Layout>
           </ProtectedRoute>
         } />
-        <Route path="/shopping-list" element={
+        {/* <Route path="/shopping-list" element={
           <ProtectedRoute>
             <Layout>
               <ShoppingList />
             </Layout>
           </ProtectedRoute>
-        } />
+        } /> */}
         <Route path="/recipes" element={
           <ProtectedRoute>
             <Layout>

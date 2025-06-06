@@ -8,6 +8,7 @@ interface AddShoppingListModalProps {
   isOpen: boolean;
   onClose: () => void;
   shoppingList?: ShoppingList;
+  groupId: string; // Thêm prop này
 }
 
 const categories = [
@@ -32,7 +33,8 @@ const priorities = [
 export const AddShoppingListModal: React.FC<AddShoppingListModalProps> = ({
   isOpen,
   onClose,
-  shoppingList
+  shoppingList,
+  groupId
 }) => {
   const { dispatch } = useAppContext();
   const [formData, setFormData] = useState({
@@ -59,7 +61,7 @@ export const AddShoppingListModal: React.FC<AddShoppingListModalProps> = ({
         name: shoppingList.name,
         date: shoppingList.date
       });
-      setItems(shoppingList.items.map(item => ({
+      setItems(shoppingList.shoppingItems.map(item => ({
         name: item.name,
         quantity: item.quantity,
         unit: item.unit,
@@ -115,10 +117,11 @@ export const AddShoppingListModal: React.FC<AddShoppingListModalProps> = ({
       id: shoppingList?.id || Date.now().toString(),
       name: formData.name.trim(),
       date: formData.date,
+      groupId: groupId,
       completed: false,
-      items: validItems.map((item, index) => ({
+      shoppingItems: validItems.map((item, index) => ({
         ...item,
-        id: shoppingList?.items[index]?.id || `${Date.now()}-${index}`,
+        id: shoppingList?.shoppingItems[index]?.id || `${Date.now()}-${index}`,
         name: item.name.trim()
       }))
     };

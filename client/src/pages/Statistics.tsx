@@ -11,7 +11,12 @@ import { useAppContext } from '../contexts/AppContext';
 
 const Statistics: React.FC = () => {
   const { state } = useAppContext();
-  const { products, expenses, shoppingLists, mealPlans } = state;
+  const { 
+    products = [], 
+    expenses = [], 
+    shoppingLists = [], 
+    mealPlans = [] 
+  } = state || {};
   
   const [selectedPeriod, setSelectedPeriod] = useState('month'); // month, quarter, year
 
@@ -136,15 +141,15 @@ const Statistics: React.FC = () => {
     const completionRate = totalLists > 0 ? (completedLists / totalLists * 100) : 0;
 
     // Tổng số items
-    const totalItems = shoppingLists.reduce((sum, list) => sum + list.items.length, 0);
+    const totalItems = shoppingLists.reduce((sum, list) => sum + (list.shoppingItems?.length || 0), 0);
     const completedItems = shoppingLists.reduce((sum, list) => 
-      sum + list.items.filter(item => item.completed).length, 0
+      sum + (list.shoppingItems?.filter(item => item.completed).length || 0), 0
     );
 
     // Mục thường mua nhất
     const itemFrequency: Record<string, number> = {};
     shoppingLists.forEach(list => {
-      list.items.forEach(item => {
+      list.shoppingItems?.forEach(item => {
         if (!itemFrequency[item.name]) {
           itemFrequency[item.name] = 0;
         }
@@ -347,7 +352,7 @@ const Statistics: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Sản phẩm có giá trị cao */}
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Sản phẩm giá trị cao</h3>
@@ -385,7 +390,6 @@ const Statistics: React.FC = () => {
         {/* Thống kê tình trạng kho */}
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Tình trạng kho</h3>
-          
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
               <span className="font-medium text-green-900">Đầy đủ</span>
