@@ -7,6 +7,7 @@ import {
   PencilIcon
 } from '@heroicons/react/24/outline';
 import { useAppContext, MealPlan, Recipe } from '../contexts/AppContext';
+import ProductImage from 'components/common/ProductImage';
 
 const MealPlanner: React.FC = () => {
   const { state, dispatch } = useAppContext();
@@ -367,13 +368,10 @@ const MealPlanner: React.FC = () => {
                         className="border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-green-300 hover:bg-green-50 transition-colors"
                       >
                         <div className="flex items-start space-x-3">
-                          <img
+                          <ProductImage
                             src={recipe.image}
                             alt={recipe.name}
                             className="w-16 h-16 object-cover rounded-lg"
-                            onError={(e) => {
-                              e.currentTarget.src = 'https://via.placeholder.com/64x64?text=No+Image';
-                            }}
                           />
                           <div className="flex-1 min-w-0">
                             <h4 className="font-medium text-gray-900 truncate">{recipe.name}</h4>

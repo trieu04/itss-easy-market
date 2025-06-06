@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAppContext, Product } from '../contexts/AppContext';
 import { AddProductModal } from '../components/modals/AddProductModal';
+import ProductImage from 'components/common/ProductImage';
 
 interface FridgeItem extends Product {
   location: 'fridge' | 'freezer' | 'pantry';
@@ -323,13 +324,10 @@ const FridgeManager: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {suggestedRecipes.map((recipe) => (
               <div key={recipe.id} className="border border-gray-200 rounded-lg p-4 hover:border-green-300 hover:bg-green-50 transition-colors cursor-pointer">
-                <img
+                <ProductImage
                   src={recipe.image}
                   alt={recipe.name}
                   className="w-full h-32 object-cover rounded-lg mb-3"
-                  onError={(e) => {
-                    e.currentTarget.src = 'https://via.placeholder.com/300x200?text=No+Image';
-                  }}
                 />
                 <h4 className="font-medium text-gray-900">{recipe.name}</h4>
                 <p className="text-sm text-gray-500 mt-1">{recipe.description}</p>

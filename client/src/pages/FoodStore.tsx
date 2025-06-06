@@ -11,6 +11,7 @@ import {
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import { useAppContext, Product } from '../contexts/AppContext';
 import { AddProductModal } from '../components/modals/AddProductModal';
+import ProductImage from 'components/common/ProductImage';
 
 const FoodStore: React.FC = () => {
   const { state, dispatch } = useAppContext();
@@ -178,13 +179,10 @@ const FoodStore: React.FC = () => {
             >
               {/* Product Image */}
               <div className="relative h-48 bg-gray-200">
-                <img
+                <ProductImage
                   src={product.image}
                   alt={product.name}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = 'https://via.placeholder.com/300x200?text=No+Image';
-                  }}
                 />
                 
                 {/* Discount Badge */}

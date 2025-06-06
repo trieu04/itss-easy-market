@@ -13,6 +13,7 @@ import {
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import { useAppContext, Recipe } from '../contexts/AppContext';
 import { AddRecipeModal } from '../components/modals/AddRecipeModal';
+import ProductImage from 'components/common/ProductImage';
 
 const Recipes: React.FC = () => {
   const { state, dispatch } = useAppContext();
@@ -197,13 +198,10 @@ const Recipes: React.FC = () => {
             >
               {/* Recipe Image */}
               <div className="relative h-48 bg-gray-200">
-                <img
+                <ProductImage
                   src={recipe.image}
                   alt={recipe.name}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = 'https://via.placeholder.com/300x200?text=No+Image';
-                  }}
                 />
                 
                 {/* Action Buttons */}
@@ -329,13 +327,10 @@ const Recipes: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="relative">
-                <img
+                <ProductImage
                   src={viewingRecipe.image}
                   alt={viewingRecipe.name}
                   className="w-full h-64 object-cover rounded-t-2xl"
-                  onError={(e) => {
-                    e.currentTarget.src = 'https://via.placeholder.com/600x300?text=No+Image';
-                  }}
                 />
                 <button
                   onClick={() => setViewingRecipe(undefined)}

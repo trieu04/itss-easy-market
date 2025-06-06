@@ -93,7 +93,7 @@ export const AddFridgeItemModal: React.FC<AddFridgeItemModalProps> = ({
         unit: formData.unit,
         expirationTime: expirationDate.toISOString(),
         storeLocation: formData.storeLocation,
-        image: formData.image.trim() || 'https://via.placeholder.com/150',
+        image: formData.image.trim() || undefined,
       });
       
       handleClose();
