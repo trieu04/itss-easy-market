@@ -360,4 +360,17 @@ export const mockExpenses: ExpenseRecord[] = [
     items: ['Sữa tươi', 'Trứng gà'],
     description: 'Sữa và trứng'
   }
-]; 
+];
+
+export const mockUsers = [
+  {
+    "id": "1001",
+    "name": "demo user 1",
+    "email": "demo1@gmail.com"
+  },
+  {
+    "id": "1002",
+    "name": "demo user 2",
+    "email": "demo2@gmail.com"
+  }
+];
