@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useAppContext } from '../contexts/AppContext';
-import { mockProducts, mockRecipes, mockShoppingLists, mockMealPlans, mockExpenses } from '../data/mockData';
+import { mockProducts, mockRecipes, mockShoppingLists, mockMealPlans, mockExpenses, mockUsers } from '../data/mockData';
 import { useAuthContext } from 'contexts/AuthContext';
 
 export const useInitialData = () => {
@@ -23,7 +23,8 @@ export const useInitialData = () => {
           recipes: mockRecipes,
           shoppingLists: mockShoppingLists,
           mealPlans: mockMealPlans,
-          expenses: mockExpenses
+          expenses: mockExpenses,
+          users: mockUsers,
         }
       });
     }

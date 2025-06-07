@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
 import httpClient from '../services/httpClient';
+import { mockUsers } from 'data/mockData';
 
 // Types
 export interface Product {
@@ -156,7 +157,9 @@ const initialState: AppState = {
   fridges: [],
   shoppingItems: [],
   groups: [],
-  users: [],
+  users: [
+    ...mockUsers,
+  ],
   recipes: [],
   mealPlans: [],
   expenses: [],
