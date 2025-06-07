@@ -86,60 +86,7 @@ const GroupDetail: React.FC = () => {
 
   // State quản lý fridge items
   const [fridgeItems, setFridgeItems] = useState<FridgeItem[]>([
-    {
-      id: 'fridge1',
-      name: 'Thịt gà',
-      storeLocation: 'frozen',
-      quantity: 2,
-      unit: 'kg',
-      expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      image: 'https://via.placeholder.com/150',
-    },
-    {
-      id: 'fridge2',
-      name: 'Sữa tươi',
-      storeLocation: 'fresh',
-      quantity: 1,
-      unit: 'lít',
-      expirationTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-      image: 'https://via.placeholder.com/150',
-    },
-    {
-      id: 'fridge3',
-      name: 'Cá hồi',
-      storeLocation: 'frozen',
-      quantity: 1,
-      unit: 'kg',
-      expirationTime: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      image: 'https://via.placeholder.com/150',
-    },
-    {
-      id: 'fridge4',
-      name: 'Rau xà lách',
-      storeLocation: 'fresh',
-      quantity: 3,
-      unit: 'bó',
-      expirationTime: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
-      image: 'https://via.placeholder.com/150',
-    },
-    {
-      id: 'fridge5',
-      name: 'Kem vanilla',
-      storeLocation: 'frozen',
-      quantity: 2,
-      unit: 'hộp',
-      expirationTime: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
-      image: 'https://via.placeholder.com/150',
-    },
-    {
-      id: 'fridge6',
-      name: 'Bánh mì',
-      storeLocation: 'fresh',
-      quantity: 5,
-      unit: 'ổ',
-      expirationTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      image: 'https://via.placeholder.com/150',
-    },
+    
   ]);
 
   // Tìm nhóm theo groupId
