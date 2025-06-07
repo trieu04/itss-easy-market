@@ -12,6 +12,7 @@ import {
   TrashIcon,
   EyeIcon
 } from '@heroicons/react/24/outline';
+import ProductImage from 'components/common/ProductImage';
 
 
 // Dữ liệu nhóm mẫu
@@ -115,15 +116,10 @@ const Groups: React.FC = () => {
           >
             {/* Group Image */}
             <div className="relative h-40 bg-gray-200">
-              <img
-                src={group.image && group.image.trim() !== '' 
-                  ? group.image 
-                  : 'https://via.placeholder.com/300x200?text=No+Image'}
+              <ProductImage
+                src={group.image}
                 alt={group.name}
                 className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.src = 'https://via.placeholder.com/300x200?text=No+Image';
-                }}
               />
               <div className="absolute top-2 right-2 flex flex-col space-y-2">
                 <UserGroupIcon className="h-5 w-5 text-green-500 bg-white rounded-full p-1 shadow" />

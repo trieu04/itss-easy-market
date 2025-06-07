@@ -9,6 +9,7 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline';
 import { AddFridgeItemModal } from '../modals/AddFridgeItemModal';
+import ProductImage from 'components/common/ProductImage';
 
 interface FridgeItem {
   id: string;
@@ -159,8 +160,7 @@ export const FridgeTab: React.FC<FridgeTabProps> = ({
               </div>
 
               <div className="relative mt-12">
-                <img
-                  src="https://placehold.co/150x"
+                <ProductImage
                   alt="Fridge Item"
                   className="w-16 h-16 object-cover rounded-lg"
                 />
